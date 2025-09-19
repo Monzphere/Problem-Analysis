@@ -139,27 +139,14 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         addLTSButtonToDashboardWidgets() {
-            // Buscar widgets de problemas na dashboard
-            const selectors = [
-                '.dashboard-grid-widget-contents .dashboard-widget-problems',
-                '.dashboard-widget-problems',
-                '.dashboard-grid-widget-contents table.list-table',
-                '[class*="dashboard"][class*="widget"][class*="problem"] table.list-table',
-                '.dashboard-grid-widget table.list-table'
-            ];
-            
+            // Buscar apenas widgets específicos com ambas as classes
+            const specificWidget = document.querySelector('.dashboard-grid-widget-contents.dashboard-widget-problems');
+
             const problemWidgets = new Set();
-            
-            selectors.forEach(selector => {
-                document.querySelectorAll(selector).forEach(element => {
-                    if (element.tagName === 'TABLE') {
-                        const widget = element.closest('.dashboard-grid-widget-contents, .dashboard-widget-problems') || element.parentElement;
-                        if (widget) problemWidgets.add(widget);
-                    } else {
-                        problemWidgets.add(element);
-                    }
-                });
-            });
+
+            if (specificWidget) {
+                problemWidgets.add(specificWidget);
+            }
             
             problemWidgets.forEach(widget => {
                 const problemTable = widget.querySelector('table.list-table') || (widget.tagName === 'TABLE' ? widget : null);
@@ -246,14 +233,6 @@ document.addEventListener('DOMContentLoaded', () => {
                     problemName = problemName || fallbackData.problemName;
                 }
 
-                console.log('AnalistProblem - Dados extraídos via menu-popup:', {
-                    eventid: eventid,
-                    triggerid: triggerid,
-                    hostid: hostid,
-                    hostname: hostname,
-                    problemName: problemName
-                });
-
                 return eventid ? {
                     eventid: eventid,
                     triggerid: triggerid,
@@ -263,7 +242,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 } : null;
 
             } catch (error) {
-                console.log('Erro ao extrair dados via menu-popup:', error);
+                
                 return null;
             }
         }
@@ -383,18 +362,9 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
 
             } catch (error) {
-                console.log('Erro ao extrair dados da linha:', error);
+                
                 return null;
             }
-
-            // Debug: log dos dados extraídos
-            console.log('AnalistProblem - Dados extraídos da linha:', {
-                eventid: eventid,
-                triggerid: triggerid,
-                hostid: hostid,
-                hostname: hostname,
-                problemName: problemName
-            });
 
             return eventid ? {
                 eventid: eventid,
@@ -455,7 +425,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         openLTSModal(problemData) {
-            console.log('AnalistProblem - Abrindo modal com dados:', problemData);
+            
             
             const params = new URLSearchParams({
                 eventid: problemData.eventid,
@@ -467,7 +437,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
             // URL do endpoint do nosso módulo
             const url = params.toString();
-            console.log('AnalistProblem - URL construída:', url);
+            
 
             // Abre popup usando a função do Zabbix
             if (typeof PopUp !== 'undefined') {

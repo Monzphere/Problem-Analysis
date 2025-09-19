@@ -22,7 +22,8 @@
 
 [theme='dark-theme'] .services-summary-header {
     background: #2b2b2b;
-    border-left: 4px solid #4dabf7;
+    border: 1px solid #4a4a4a;
+    color: #ffffff;
 }
 
 [theme='dark-theme'] .services-summary-header h4 {
@@ -30,69 +31,456 @@
 }
 
 [theme='dark-theme'] .services-summary-header p {
-    color: #aaa;
+    color: #cccccc;
 }
 
 [theme='dark-theme'] .services-hierarchy-path {
-    background: #2b2b2b;
-    border: 1px solid #3a3a3a;
+    background: #333333;
+    border: 1px solid #4a4a4a;
     color: #ffffff;
 }
 
 [theme='dark-theme'] .hierarchy-label {
-    color: #aaa;
+    color: #cccccc;
 }
 
 [theme='dark-theme'] .hierarchy-arrow {
-    color: #666;
+    color: #888888;
 }
 
+
 [theme='dark-theme'] .hierarchy-service {
-    color: #4dabf7;
+    color: #5dade2;
 }
+
 [theme='dark-theme'] .services-no-results {
     background: #2b2b2b;
-    border: 1px solid #3a3a3a;
-    color: #ffffff;
+    border: 1px solid #4a4a4a;
+    color: #cccccc;
 }
 
 [theme='dark-theme'] .service-card {
     background: #2b2b2b;
-    border: 1px solid #3a3a3a;
+    border: 1px solid #4a4a4a;
     color: #ffffff;
-    box-shadow: 0 2px 4px rgba(0,0,0,0.3);
 }
 
 [theme='dark-theme'] .service-card-impacted {
-    border-left: 4px solid #ff6b6b;
+    border-left: 3px solid #e74c3c;
+    background: #3d2b2b;
+}
+
+[theme='dark-theme'] .service-header {
+    border-bottom: 1px solid #4a4a4a;
+}
+
+[theme='dark-theme'] .service-name {
+    color: #ffffff;
 }
 
 [theme='dark-theme'] .service-name-link {
-    color: #4dabf7;
+    color: #5dade2;
 }
 
 [theme='dark-theme'] .impacted-badge {
-    background: #ff6b6b;
+    background: #e74c3c;
 }
+
+[theme='dark-theme'] .service-sla-info {
+    background: #333333;
+    border: 1px solid #4a4a4a;
+}
+
+[theme='dark-theme'] .sla-item {
+    border-bottom: 1px dotted #555555;
+}
+
 [theme='dark-theme'] .sla-label {
-    color: #aaa;
+    color: #cccccc;
 }
+
 [theme='dark-theme'] .sla-value {
     color: #ffffff;
 }
 
 [theme='dark-theme'] .sla-value-success {
-    color: #51cf66 !important;
+    color: #4caf50 !important;
 }
+
 [theme='dark-theme'] .sla-value-error {
-    color: #ff6b6b !important;
+    color: #f44336 !important;
 }
+
 [theme='dark-theme'] .service-no-sla {
-    color: #aaa;
+    color: #cccccc;
     background: #1a1a1a;
-    border: 1px solid #3a3a3a;
+    border: 1px solid #4a4a4a;
 }
 [theme='dark-theme'] .lts-header {
     background: #2b2b2b !important;
     color: #cccccc !important;
+}
+
+/* Botões LTS para tema escuro - estilo similar aos submenus do Zabbix */
+[theme='dark-theme'] .js-lts-button,
+[theme='dark-theme'] .js-lts-button-widget {
+    background: transparent !important;
+    color: #e5e7eb !important;
+    border: 1px solid #4b5563 !important;
+}
+
+[theme='dark-theme'] .js-lts-button:hover,
+[theme='dark-theme'] .js-lts-button-widget:hover {
+    background: #374151 !important;
+    border-color: #6b7280 !important;
+    color: #f9fafb !important;
+}
+
+[theme='dark-theme'] .js-lts-button:active,
+[theme='dark-theme'] .js-lts-button-widget:active {
+    background: #4b5563 !important;
+    border-color: #9ca3af !important;
+    color: #f9fafb !important;
+}
+
+/* Analytics & History Tab Styles para tema escuro - Seguindo padrões tradicionais */
+[theme='dark-theme'] .analytics-section {
+    background: #2b2b2b;
+    border: 1px solid #4a4a4a;
+    color: #ffffff;
+}
+
+[theme='dark-theme'] .analytics-section h4 {
+    color: #ffffff;
+    border-bottom: 1px solid #4a4a4a;
+}
+
+[theme='dark-theme'] .analytics-section table {
+    background: #2b2b2b;
+    color: #ffffff;
+}
+
+[theme='dark-theme'] .analytics-section th {
+    background: #333333;
+    color: #cccccc;
+    border-bottom: 1px solid #4a4a4a;
+}
+
+[theme='dark-theme'] .analytics-section td {
+    border-bottom: 1px solid #3a3a3a;
+}
+
+[theme='dark-theme'] .analytics-section tr:hover {
+    background: #333333;
+}
+
+[theme='dark-theme'] .business-impact-section {
+    background: #1a1a1a;
+}
+
+[theme='dark-theme'] .business-impact-section table {
+    background: #2b2b2b;
+}
+
+/* Impact Assessment Tab Styles para tema escuro */
+[theme='dark-theme'] .impact-container .analytics-section {
+    background: #2b2b2b;
+    border: 1px solid #4a4a4a;
+    color: #ffffff;
+}
+
+
+
+[theme='dark-theme'] .impact-container table {
+    background: #2b2b2b;
+    color: #ffffff;
+}
+
+[theme='dark-theme'] .impact-container th {
+    background: #333333;
+    color: #cccccc;
+    border-bottom: 1px solid #4a4a4a;
+}
+
+[theme='dark-theme'] .impact-container td {
+    border-bottom: 1px solid #3a3a3a;
+}
+
+[theme='dark-theme'] .impact-container tr:hover {
+    background: #333333;
+}
+
+[theme='dark-theme'] .correlation-analysis-section {
+    background: #2b2b2b;
+}
+
+[theme='dark-theme'] .correlation-analysis-section table {
+    background: #2b2b2b;
+}
+
+/* Event Cascade Timeline - Dark Theme Enhanced */
+[theme="dark-theme"] .cascade-trace-section {
+    background: #2b2b2b;
+}
+
+[theme="dark-theme"] .cascade-trace-section h4 {
+    background: #333333;
+    color: #ffffff;
+}
+
+[theme="dark-theme"] .trace-timeline-container {
+    background: #2b2b2b;
+    border-color: #404040;
+    color: #e0e0e0;
+}
+
+[theme="dark-theme"] .timeline-summary-bar {
+    background: #333333;
+    color: #ffffff;
+}
+
+[theme="dark-theme"] .trace-flow-container {
+    background: #2b2b2b;
+}
+
+[theme="dark-theme"] .event-timeline-marker {
+    background: #2b2b2b;
+    color: #ffffff;
+}
+
+[theme="dark-theme"] .event-card {
+    background: #2b2b2b;
+    color: #ffffff;
+    border-color: #404040;
+}
+
+[theme="dark-theme"] .event-title {
+    color: #ffffff;
+}
+
+[theme="dark-theme"] .event-time {
+    background: #333333;
+    color: #cccccc;
+    border-color: #555555;
+}
+
+
+[theme="dark-theme"] .event-host {
+    color: #5dade2;
+}
+
+[theme="dark-theme"] .event-host.different-host {
+    color: #ff6b6b;
+    font-weight: bold;
+}
+
+[theme="dark-theme"] .event-details {
+    background: #1a1a1a;
+    color: #cccccc;
+    border-color: #404040;
+}
+
+[theme="dark-theme"] .event-expand-toggle {
+    background: #2b2b2b;
+    color: #cccccc;
+    border-color: #555555;
+}
+
+[theme="dark-theme"] .event-expand-toggle:hover {
+    border-color: #777777;
+}
+
+[theme="dark-theme"] .trace-timeline-line {
+    border-color: #555555;
+}
+
+[theme="dark-theme"] .zabbix-trace-view {
+    background: #2b2b2b;
+    border-color: #404040;
+}
+
+[theme="dark-theme"] .zabbix-trace-view .trace-header {
+    background: #333333;
+    border-color: #404040;
+    color: #ffffff;
+}
+
+[theme="dark-theme"] .trace-info-bar {
+    background: #2b2b2b;
+    border-color: #404040;
+    color: #adb5bd;
+}
+
+[theme="dark-theme"] .trace-span {
+    border-color: #404040;
+}
+
+[theme="dark-theme"] .trace-span:hover {
+    background-color: #2b2b2b;
+}
+
+[theme="dark-theme"] .expand-icon {
+    color: #adb5bd;
+}
+
+[theme="dark-theme"] .expand-icon:hover {
+    color: #e0e0e0;
+}
+
+[theme="dark-theme"] .service-name {
+    color: #e0e0e0;
+}
+
+[theme="dark-theme"] .operation-name {
+    color: #adb5bd;
+}
+
+[theme="dark-theme"] .duration {
+    color: #adb5bd;
+}
+
+[theme="dark-theme"] .timeline-bar {
+    background: #404040;
+}
+
+[theme="dark-theme"] .span-details {
+    background: #2b2b2b;
+    border-color: #404040;
+    color: #adb5bd;
+}
+
+[theme="dark-theme"] .span-details strong {
+    color: #e0e0e0;
+}
+
+/* Dark theme - Confidence percentage styling */
+[theme="dark-theme"] .confidence {
+    font-size: 11px;
+    font-weight: bold;
+    padding: 2px 6px;
+    border-radius: 3px;
+    margin-right: 8px;
+    flex-shrink: 0;
+}
+
+/* Dark theme - Group spans for organizing events */
+[theme="dark-theme"] .group-span {
+    background: #2b2b2b !important;
+    font-weight: 500;
+    border-bottom: 1px solid #404040 !important;
+}
+
+[theme="dark-theme"] .group-span:hover {
+    background: #333333 !important;
+}
+
+[theme="dark-theme"] .show-more-span {
+    font-style: italic;
+    color: #adb5bd;
+}
+
+[theme="dark-theme"] .show-more-span:hover {
+    background: #2b2b2b !important;
+}
+
+/* Enhanced Correlation Container for Dark Theme */
+[theme='dark-theme'] .correlation-container {
+    background: transparent;
+    color: #ffffff;
+}
+
+/* Correlation sections following Zabbix dark patterns */
+[theme='dark-theme'] .correlations-section-compact {
+    background: #2b2b2b;
+    border: 1px solid #4a4a4a;
+}
+
+[theme='dark-theme'] .correlations-section-compact h4 {
+    background: #333333;
+    border-bottom: 1px solid #4a4a4a;
+    color: #ffffff;
+}
+
+/* Tag and Group correlation boxes for dark theme */
+[theme='dark-theme'] .correlations-section-compact > div > div {
+    background: #1a1a1a !important;
+    border: 1px solid #3a3a3a !important;
+}
+
+[theme='dark-theme'] .correlations-section-compact h5 {
+    background: #2b2b2b !important;
+    border-bottom: 1px solid #3a3a3a !important;
+    color: #cccccc !important;
+}
+
+/* Enhanced Cascade Timeline for Dark Theme */
+[theme='dark-theme'] .cascade-trace-section {
+    background: #2b2b2b;
+    border: 1px solid #4a4a4a;
+}
+
+[theme='dark-theme'] .cascade-trace-section h4 {
+    background: #333333;
+    border-bottom: 1px solid #4a4a4a;
+    color: #ffffff;
+}
+
+[theme='dark-theme'] .trace-info-bar .trace-summary {
+    color: #ffffff;
+}
+
+[theme='dark-theme'] .trace-info-bar .confidence-indicator {
+    background: #1e3a8a;
+    color: #bfdbfe;
+}
+
+/* Enhanced trace spans for dark theme */
+[theme='dark-theme'] .trace-span.root-cause {
+    border-left: 3px solid #dc2626;
+    background: #2d1b1b;
+}
+
+[theme='dark-theme'] .trace-span.correlation {
+    border-left: 3px solid #ea580c;
+    background: #2d1f1a;
+}
+
+[theme='dark-theme'] .trace-span.cascade-effect {
+    border-left: 3px solid #1d4ed8;
+    background: #1a1d2d;
+}
+
+[theme='dark-theme'] .timeline-group-header {
+    background: #333333 !important;
+    color: #ffffff !important;
+    border-color: #5dade2 !important;
+}
+
+/* Event Cascade Table Styling for Dark Theme - Enhanced for Zabbix standard tables */
+[theme='dark-theme'] .cascade-trace-section .list-table {
+    background: #2b2b2b;
+    color: #ffffff;
+}
+
+[theme='dark-theme'] .cascade-trace-section .list-table th {
+    background: #333333;
+    color: #cccccc;
+    border-bottom: 1px solid #4a4a4a;
+}
+
+[theme='dark-theme'] .cascade-trace-section .list-table td {
+    border-bottom: 1px solid #3a3a3a;
+}
+
+[theme='dark-theme'] .cascade-trace-section .list-table tr:hover {
+    background: #333333;
+}
+
+
+[theme='dark-theme'] .event-time-cell {
+    color: #cccccc;
+}
+
+[theme='dark-theme'] .different-host {
+    color: #ff6b6b;
 }

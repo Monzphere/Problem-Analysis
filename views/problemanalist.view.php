@@ -9,6 +9,8 @@ $this->addJsFile('layout.mode.js');
 $this->addJsFile('gtlc.js');
 $this->addJsFile('class.calendar.js');
 
+// CSS for Event Cascade Timeline is now integrated into theme files
+
 /**
  * @var CView $this
  */
@@ -155,36 +157,43 @@ if (!empty($monthly_comparison) && !empty($monthly_comparison['current_month']))
     $previous_month = $monthly_comparison['previous_month'];
     $change_percentage = $monthly_comparison['change_percentage'] ?? 0;
     
-    // Determine change color and icon
+    // Determine change color and status
     $change_color = '#666666'; // Neutral
-    $change_icon = '→';
+    $change_status = 'No change';
     $change_text = '';
-    
+
     if ($change_percentage > 0) {
         $change_color = '#e74c3c'; // Red for increase
-        $change_icon = '↗';
+        $change_status = 'Increased';
         $change_text = '+' . $change_percentage . '%';
     } elseif ($change_percentage < 0) {
         $change_color = '#27ae60'; // Green for decrease
-        $change_icon = '↘';
+        $change_status = 'Decreased';
         $change_text = $change_percentage . '%';
     } else {
         $change_text = '0%';
     }
-    
+
     // Previous month row
     $comparison_table->addRow([
         $previous_month['name'],
         $previous_month['count'],
         '-'
     ]);
-    
-    // Current month row
+
+    // Current month row with Zabbix-style status indicator
+    $change_badge = new CSpan($change_text);
+    $change_badge->addStyle("font-weight: bold;");
+
+    if ($change_percentage != 0) {
+        $change_badge->setAttribute('title', $change_status . ' compared to previous month');
+        $change_badge->addClass($change_percentage > 0 ? 'status-red' : 'status-green');
+    }
+
     $comparison_table->addRow([
         $current_month['name'],
         $current_month['count'],
-        (new CSpan($change_icon . ' ' . $change_text))
-            ->addStyle("color: {$change_color}; font-weight: bold;")
+        $change_badge
     ]);
     
     $comparison_section->addItem($comparison_table);
@@ -199,7 +208,7 @@ if (!empty($monthly_comparison) && !empty($monthly_comparison['current_month']))
         }
         
         $summary = new CDiv($trend_message);
-        $summary->addStyle("color: {$change_color}; font-style: italic; margin-top: 10px; font-size: 12px;");
+        $summary->addStyle("font-style: italic; margin-top: 10px; font-size: 12px;");
         $comparison_section->addItem($summary);
     }
     
@@ -519,6 +528,306 @@ $services_div->addItem($services_tree_container);
 
 $tabs->addTab('services', _('Services'), $services_div);
 
+// TAB 7: Analytics & History
+$analytics_div = new CDiv();
+
+// Analytics container with similar structure to other tabs
+$analytics_container = new CDiv();
+$analytics_container->addClass('analytics-container');
+
+// SEÇÃO 1: Resolution & Impact Analytics (Consolidada)
+$main_analytics_section = new CDiv();
+$main_analytics_section->addClass('resolution-impact-section');
+$main_analytics_section->addItem(new CTag('h4', false, _('Resolution & Impact Analytics')));
+
+$main_table = new CTableInfo();
+$main_table->setHeader([_('Category'), _('Metric'), _('Current'), _('Status/Level')]);
+
+// Get real analytics data
+$analytics = $data['analytics_data'] ?? [];
+
+$main_analytics = [
+    [
+        'category' => 'Resolution',
+        'metric' => _('MTTR (Mean Time To Resolution)'),
+        'current' => $analytics['mttr']['display'] ?? 'No data available',
+        'status' => '⏱ ' . ($analytics['mttr']['status'] ?? 'Unknown'),
+        'tooltip' => _('Average time it takes to resolve this type of problem based on historical data')
+    ],
+    [
+        'category' => 'Resolution',
+        'metric' => _('Recurrence Rate'),
+        'current' => $analytics['recurrence']['display'] ?? 'No data available',
+        'status' => ($analytics['recurrence']['status'] === 'Above average' ? 'Warning: ' : '') . ($analytics['recurrence']['status'] ?? 'Unknown'),
+        'tooltip' => _('How frequently this problem occurs compared to historical patterns')
+    ],
+    [
+        'category' => 'Impact',
+        'metric' => _('Service Criticality'),
+        'current' => $analytics['service_impact']['display'] ?? 'No data available',
+        'status' => $analytics['service_impact']['level'] ?? 'Unknown',
+        'tooltip' => _('Level of criticality based on affected services and their business importance')
+    ],
+    [
+        'category' => 'Impact',
+        'metric' => _('SLA Breach Risk'),
+        'current' => $analytics['sla_risk']['display'] ?? 'No data available',
+        'status' => '✓ ' . ($analytics['sla_risk']['risk_level'] ?? 'Unknown'),
+        'tooltip' => _('Probability of SLA breach if problem continues at current resolution pace')
+    ]
+];
+
+foreach ($main_analytics as $analytic) {
+    $category_span = (new CSpan($analytic['category']))
+        ->addStyle('font-weight: bold; color: #666;');
+
+    $metric_name = (new CSpan($analytic['metric']))
+        ->setHint($analytic['tooltip']);
+
+    $status_color = '';
+    if (strpos($analytic['status'], 'Warning') !== false || strpos($analytic['status'], 'Above average') !== false) {
+        $status_color = 'color: #ff9800; font-weight: bold;';
+    } elseif (strpos($analytic['status'], 'Low') !== false || strpos($analytic['status'], 'Normal') !== false) {
+        $status_color = 'color: #4caf50; font-weight: bold;';
+    } elseif (strpos($analytic['status'], 'In Progress') !== false || strpos($analytic['status'], 'Monitoring') !== false) {
+        $status_color = 'color: #2196f3; font-weight: bold;';
+    } elseif (strpos($analytic['status'], 'High') !== false || strpos($analytic['status'], 'Critical') !== false) {
+        $status_color = 'color: #f44336; font-weight: bold;';
+    } elseif (strpos($analytic['status'], 'Medium') !== false) {
+        $status_color = 'color: #ff9800; font-weight: bold;';
+    } elseif (strpos($analytic['status'], 'Unknown') !== false || strpos($analytic['status'], 'No data') !== false) {
+        $status_color = 'color: #666; font-style: italic;';
+    } else {
+        $status_color = 'font-weight: normal;';
+    }
+
+    $main_table->addRow([
+        $category_span,
+        $metric_name,
+        $analytic['current'],
+        (new CSpan($analytic['status']))->addStyle($status_color)
+    ]);
+}
+
+$main_analytics_section->addItem($main_table);
+
+// SEÇÃO 2: Historical Patterns & Performance
+$secondary_analytics_section = new CDiv();
+$secondary_analytics_section->addClass('patterns-performance-section');
+$secondary_analytics_section->addItem(new CTag('h4', false, _('Historical Patterns & Performance Baseline')));
+
+$secondary_table = new CTableInfo();
+$secondary_table->setHeader([_('Type'), _('Metric'), _('Analysis'), _('Indicator')]);
+
+$secondary_analytics = [
+    [
+        'type' => 'Pattern',
+        'metric' => _('Occurrence Frequency'),
+        'analysis' => $analytics['patterns']['frequency'] ?? 'No historical data',
+        'indicator' => $analytics['patterns']['trend'] ?? 'Unknown',
+        'tooltip' => _('How often this problem occurs compared to previous periods')
+    ],
+    [
+        'type' => 'Pattern',
+        'metric' => _('Peak Time Window'),
+        'analysis' => $analytics['patterns']['peak_time'] ?? 'No pattern identified',
+        'indicator' => 'Time Pattern',
+        'tooltip' => _('Time periods when this problem is most likely to occur')
+    ],
+    [
+        'type' => 'Performance',
+        'metric' => _('CPU Usage Anomaly'),
+        'analysis' => $analytics['performance_anomalies']['cpu_anomaly'] ?? 'No CPU data',
+        'indicator' => (strpos($analytics['performance_anomalies']['cpu_anomaly'] ?? '', 'High') !== false) ? 'Critical' : 'Normal',
+        'tooltip' => _('Current CPU usage compared to normal levels')
+    ],
+    [
+        'type' => 'Performance',
+        'metric' => _('Memory Usage Anomaly'),
+        'analysis' => $analytics['performance_anomalies']['memory_anomaly'] ?? 'No Memory data',
+        'indicator' => (strpos($analytics['performance_anomalies']['memory_anomaly'] ?? '', 'High') !== false) ? 'Critical' : 'Normal',
+        'tooltip' => _('Current memory usage compared to normal levels')
+    ]
+];
+
+foreach ($secondary_analytics as $analytic) {
+    $type_span = (new CSpan($analytic['type']))
+        ->addStyle('font-weight: bold; color: #666;');
+
+    $metric_name = (new CSpan($analytic['metric']))
+        ->setHint($analytic['tooltip']);
+
+    $indicator_color = '';
+    if (strpos($analytic['indicator'], 'Critical') !== false) {
+        $indicator_color = 'color: #f44336; font-weight: bold;';
+    } elseif (strpos($analytic['indicator'], 'Increasing') !== false) {
+        $indicator_color = 'color: #ff9800; font-weight: bold;';
+    } elseif (strpos($analytic['indicator'], 'Decreasing') !== false) {
+        $indicator_color = 'color: #4caf50; font-weight: bold;';
+    } elseif (strpos($analytic['indicator'], 'Stable') !== false || strpos($analytic['indicator'], 'Consistent') !== false || strpos($analytic['indicator'], 'Time Pattern') !== false) {
+        $indicator_color = 'color: #2196f3; font-weight: bold;';
+    } elseif (strpos($analytic['indicator'], 'Normal') !== false) {
+        $indicator_color = 'color: #4caf50; font-weight: bold;';
+    } elseif (strpos($analytic['indicator'], 'Unknown') !== false || strpos($analytic['indicator'], 'No data') !== false) {
+        $indicator_color = 'color: #666; font-style: italic;';
+    } else {
+        $indicator_color = 'color: #333; font-weight: normal;';
+    }
+
+    $secondary_table->addRow([
+        $type_span,
+        $metric_name,
+        $analytic['analysis'],
+        (new CSpan($analytic['indicator']))->addStyle($indicator_color)
+    ]);
+}
+
+$secondary_analytics_section->addItem($secondary_table);
+
+// Add sections to analytics container
+$analytics_container->addItem($main_analytics_section);
+$analytics_container->addItem($secondary_analytics_section);
+
+$analytics_div->addItem($analytics_container);
+
+$tabs->addTab('analytics', _('Analytics & History'), $analytics_div);
+
+// TAB 8: Impact Assessment
+$impact_div = new CDiv();
+
+// Impact Assessment container
+$impact_container = new CDiv();
+$impact_container->addClass('impact-container');
+
+// Get real impact assessment data
+$impact_data = $data['impact_assessment_data'] ?? [];
+
+// SEÇÃO 1: Dependency Impact
+$dependency_section = new CDiv();
+$dependency_section->addClass('dependency-impact-section');
+$dependency_section->addItem(new CTag('h4', false, _('Dependency Impact Analysis')));
+
+$dependency_table = new CTableInfo();
+$dependency_table->setHeader([_('Impact Category'), _('Details'), _('Status'), _('Impact Level')]);
+
+$dependency_impact = $impact_data['dependency_impact'] ?? [];
+$technical_metrics = $impact_data['technical_metrics'] ?? [];
+$cascade_analysis = $impact_data['cascade_analysis'] ?? [];
+
+$dependency_items = [
+    [
+        'category' => _('Infrastructure Impact'),
+        'details' => $dependency_impact['infrastructure_impact'] ?? 'Unknown',
+        'status' => ($dependency_impact['total_affected_count'] ?? 0) . ' services affected',
+        'level' => $dependency_impact['infrastructure_impact'] ?? 'Unknown'
+    ],
+    [
+        'category' => _('Host Availability'),
+        'details' => $technical_metrics['service_type'] ?? 'Unknown',
+        'status' => $technical_metrics['host_availability'] ?? 'Unknown',
+        'level' => $technical_metrics['host_availability'] === 'Unavailable' ? 'High' :
+                  ($technical_metrics['host_availability'] === 'Degraded' ? 'Medium' : 'Low')
+    ],
+    [
+        'category' => _('Problem Duration'),
+        'details' => $technical_metrics['problem_duration'] ?? 'Unknown',
+        'status' => ($technical_metrics['is_critical_environment'] ?? false) ? 'Critical Environment' : 'Standard Environment',
+        'level' => ($technical_metrics['is_critical_environment'] ?? false) ? 'High' : 'Medium'
+    ],
+    [
+        'category' => _('Cascade Risk'),
+        'details' => count($cascade_analysis['potential_cascade_points'] ?? []) . ' risk points identified',
+        'status' => $cascade_analysis['risk_level'] ?? 'Unknown',
+        'level' => $cascade_analysis['risk_level'] ?? 'Unknown'
+    ]
+];
+
+foreach ($dependency_items as $item) {
+    $level_color = '';
+    switch (strtolower($item['level'])) {
+        case 'high':
+        case 'severe':
+        case 'critical':
+            $level_color = 'color: #f44336; font-weight: bold;';
+            break;
+        case 'medium':
+        case 'moderate':
+            $level_color = 'color: #ff9800; font-weight: bold;';
+            break;
+        case 'low':
+        case 'minimal':
+            $level_color = 'color: #4caf50; font-weight: bold;';
+            break;
+        case 'degraded':
+            $level_color = 'color: #ff9800; font-weight: bold;';
+            break;
+        default:
+            $level_color = 'color: #666; font-style: italic;';
+    }
+
+    $dependency_table->addRow([
+        $item['category'],
+        $item['details'],
+        $item['status'],
+        (new CSpan($item['level']))->addStyle($level_color)
+    ]);
+}
+
+$dependency_section->addItem($dependency_table);
+
+// SEÇÃO 3: Affected Services Detail
+if (!empty($dependency_impact['affected_services'])) {
+    $services_section = new CDiv();
+    $services_section->addClass('affected-services-section');
+    $services_section->addItem(new CTag('h4', false, _('Affected Services Detail')));
+
+    $services_table = new CTableInfo();
+    $services_table->setHeader([_('Service Name'), _('Status'), _('Impact Level'), _('Dependencies')]);
+
+    foreach ($dependency_impact['affected_services'] as $service) {
+        $impact_color = '';
+        switch (strtolower($service['impact_level'])) {
+            case 'critical':
+                $impact_color = 'color: #f44336; font-weight: bold;';
+                break;
+            case 'high':
+                $impact_color = 'color: #ff9800; font-weight: bold;';
+                break;
+            case 'low':
+                $impact_color = 'color: #4caf50; font-weight: bold;';
+                break;
+            default:
+                $impact_color = 'color: #666;';
+        }
+
+        $dependencies_text = '';
+        if ($service['parents_count'] > 0 || $service['children_count'] > 0) {
+            $dependencies_text = $service['parents_count'] . ' parents, ' . $service['children_count'] . ' children';
+        } else {
+            $dependencies_text = 'No dependencies';
+        }
+
+        $services_table->addRow([
+            $service['name'],
+            'Status: ' . $service['status'],
+            (new CSpan($service['impact_level']))->addStyle($impact_color),
+            $dependencies_text
+        ]);
+    }
+
+    $services_section->addItem($services_table);
+    $impact_container->addItem($services_section);
+}
+
+// Add sections to impact container
+$impact_container->addItem($dependency_section);
+
+$impact_div->addItem($impact_container);
+
+$tabs->addTab('impact', _('Impact Assessment'), $impact_div);
+
+
+
 $event_name = $event['name'] ?? 'Unknown Event';
 
 // Add a unique ID to tabs for easier selection
@@ -538,6 +847,7 @@ $output = [
             var weeklyData = ' . json_encode(array_values($weekly_data)) . ';
             var weekdayLabels = ' . json_encode($weekdays) . ';
             var hourLabels = ' . json_encode($hour_labels) . ';
+
             
             // Event data for services loading
             window.currentEventData = {
@@ -730,6 +1040,10 @@ $output = [
                                     if (ui.newPanel.attr("id") === "ui-id-2") {
                                         setTimeout(createPatternCharts, 100);
                                     }
+                                    // Create correlation visualizations when correlation tab is activated
+                                    if (ui.newPanel.find("#correlation-timeline-chart").length > 0) {
+                                        setTimeout(createCorrelationVisualizations, 100);
+                                    }
                                 
                                 }
                             });
@@ -759,6 +1073,10 @@ $output = [
                                     window.loadImpactedServices();
                                 }
                             }, 100);
+                        }
+                        // Create correlation visualizations when correlation tab is activated
+                        if (ui.newPanel.find("#correlation-timeline-chart").length > 0) {
+                            setTimeout(createCorrelationVisualizations, 100);
                         }
                     });
                 }, 300);
@@ -821,23 +1139,32 @@ $output = [
                             
                             
                             // Recreate D3 charts when patterns tab is shown
-                            if (target.includes("patterns") || $link.text().includes("Pattern") || 
+                            if (target.includes("patterns") || $link.text().includes("Pattern") ||
                                 $targetPanel.find("#hourly-pattern-chart").length > 0) {
-                                
+
                                 setTimeout(createPatternCharts, 50);
                                 setTimeout(createPatternCharts, 200);
                                 setTimeout(createPatternCharts, 500);
                             }
-                            
+
                             // Load services when services tab is shown
-                            if (target.includes("services") || $link.text().includes("Services") || 
+                            if (target.includes("services") || $link.text().includes("Services") ||
                                 $targetPanel.find("#services-tree-container").length > 0) {
-                                
+
                                 setTimeout(function() {
                                     if (window.loadImpactedServices) {
                                         window.loadImpactedServices();
                                     }
                                 }, 100);
+                            }
+
+                            // Create correlation visualizations when correlation tab is shown
+                            if (target.includes("correlation") || $link.text().includes("Correlation") ||
+                                $targetPanel.find("#correlation-timeline-chart").length > 0) {
+
+                                setTimeout(createCorrelationVisualizations, 50);
+                                setTimeout(createCorrelationVisualizations, 200);
+                                setTimeout(createCorrelationVisualizations, 500);
                             }
                             
                             
@@ -1156,7 +1483,7 @@ $output = [
                 
                 pathToRoot.forEach((service, index) => {
                     if (index > 0) {
-                        pathHtml += " <span class=\"hierarchy-arrow\">→</span> ";
+                        pathHtml += " <span class=\"hierarchy-arrow\">&gt;</span> ";
                     }
                     pathHtml += "<span class=\\"hierarchy-service\\" onclick=\\"selectService(\'" + service.serviceid + "\')\\">" + service.name + "</span>";
                 });
@@ -1367,11 +1694,444 @@ $output = [
                 treeContainer.innerHTML = "<div style=\\"background: #fef5f5; border: 1px solid #e74c3c; border-radius: 8px; padding: 20px; text-align: center; color: #e74c3c;\\"><p>Error loading services: " + errorMessage + "</p></div>";
             }
 
+            /**
+             * Toggle event details in timeline
+             */
+            function toggleEventDetails(toggleElement) {
+                var eventCard = toggleElement.closest(".event-card");
+                var detailsDiv = eventCard.querySelector(".event-details");
+
+                if (detailsDiv.classList.contains("expanded")) {
+                    detailsDiv.classList.remove("expanded");
+                    toggleElement.textContent = "Details";
+                } else {
+                    detailsDiv.classList.add("expanded");
+                    toggleElement.textContent = "Hide";
+                }
+            }
+
             // Make functions globally available
             window.loadImpactedServices = loadImpactedServices;
             window.loadServiceSLI = loadServiceSLI;
             window.selectService = selectService;
-            
+            window.createCorrelationVisualizations = createCorrelationVisualizations;
+            window.toggleEventDetails = toggleEventDetails;
+
+            // Initialize correlation visualizations immediately
+            jQuery(document).ready(function() {
+                setTimeout(function() {
+                    createCorrelationVisualizations();
+                }, 1000); // Wait 1 second for DOM to be fully ready
+            });
+
+            /**
+             * Create Event Cascade Timeline (Datadog-style expandable traces)
+             */
+            function createEventCascadeTimeline() {
+                var container = document.getElementById("event-cascade-timeline");
+                if (!container) {
+                    return;
+                }
+
+                if (!eventTimelineData || !eventTimelineData.events || eventTimelineData.events.length === 0) {
+                    container.innerHTML = "<div style=\"text-align: center; padding: 40px; color: #666; font-style: italic;\">No timeline data available</div>";
+                    return;
+                }
+
+                container.innerHTML = "";
+
+                // Create trace view container (Zabbix style)
+                var traceView = document.createElement("div");
+                traceView.className = "zabbix-trace-view";
+                traceView.style.cssText = "background: var(--background-color, #fff); border: 1px solid var(--border-color, #d4d4d4);";
+
+                // Create trace header (Zabbix style)
+                var header = document.createElement("div");
+                header.className = "trace-header";
+                header.textContent = "Event Correlation Timeline";
+                traceView.appendChild(header);
+
+                // Create info bar (Zabbix style)
+                var infoBar = document.createElement("div");
+                infoBar.className = "trace-info-bar";
+
+                var totalDuration = eventTimelineData.total_duration || 3600;
+                var durationText = totalDuration > 3600 ? (totalDuration/3600).toFixed(1) + "h" : (totalDuration/60).toFixed(1) + "m";
+                infoBar.innerHTML = "<span>Analysis window: " + durationText + "</span><span>Sorted by confidence</span>";
+                traceView.appendChild(infoBar);
+
+                // Create spans container (no max-height to prevent scroll)
+                var spansContainer = document.createElement("div");
+                spansContainer.className = "spans-container";
+                spansContainer.style.cssText = "background: var(--background-color, #fff);";
+
+                // Sort events by timestamp for hierarchical display
+                var events = (eventTimelineData.events || []).slice().sort(function(a, b) {
+                    return a.timestamp - b.timestamp;
+                });
+
+                // Group events by confidence level and limit display
+                var highConfidenceEvents = events.filter(function(e) { return e.confidence_percentage >= 60; });
+                var mediumConfidenceEvents = events.filter(function(e) { return e.confidence_percentage >= 30 && e.confidence_percentage < 60; });
+                var lowConfidenceEvents = events.filter(function(e) { return e.confidence_percentage < 30; });
+
+                // Add root span (current event)
+                var rootSpan = createTraceSpan({
+                    event_id: "root",
+                    event_name: "Current Problem Event",
+                    severity: 5,
+                    time_offset: 0,
+                    timestamp: eventTimelineData.timeline_start || Date.now()/1000,
+                    duration: totalDuration,
+                    confidence_percentage: 100,
+                    confidence_level: "Certain",
+                    trace_metadata: {
+                        formatted_time: new Date().toLocaleTimeString(),
+                        relative_time: "0ms",
+                        confidence_details: "Root problem event"
+                    },
+                    is_root: true,
+                    children: events.length
+                }, 0, totalDuration, true);
+
+                spansContainer.appendChild(rootSpan);
+
+                // Add high confidence events (show first 3 to avoid modal overflow)
+                if (highConfidenceEvents.length > 0) {
+                    var highConfidenceGroup = createGroupSpan("High Confidence", highConfidenceEvents.length, 1);
+                    spansContainer.appendChild(highConfidenceGroup);
+
+                    highConfidenceEvents.slice(0, 3).forEach(function(event, index) {
+                        var span = createTraceSpan(event, 2, totalDuration, false);
+                        span.setAttribute("data-group", "high-confidence");
+                        spansContainer.appendChild(span);
+                    });
+
+                    // Add "show more" for high confidence if more than 3
+                    if (highConfidenceEvents.length > 3) {
+                        var showMoreHigh = createShowMoreSpan("high-confidence", highConfidenceEvents.length - 3, 2);
+                        spansContainer.appendChild(showMoreHigh);
+                    }
+                }
+
+                // Add medium confidence group (collapsed by default)
+                if (mediumConfidenceEvents.length > 0) {
+                    var mediumConfidenceGroup = createGroupSpan("Medium Confidence", mediumConfidenceEvents.length, 1, true);
+                    spansContainer.appendChild(mediumConfidenceGroup);
+                }
+
+                // Add low confidence group (collapsed by default)
+                if (lowConfidenceEvents.length > 0) {
+                    var lowConfidenceGroup = createGroupSpan("Low Confidence", lowConfidenceEvents.length, 1, true);
+                    spansContainer.appendChild(lowConfidenceGroup);
+                }
+
+                traceView.appendChild(spansContainer);
+                container.appendChild(traceView);
+            }
+
+            /**
+             * Create individual trace span (Datadog-style)
+             */
+            function createTraceSpan(event, depth, totalDuration, isRoot) {
+                var span = document.createElement("div");
+                span.className = "trace-span";
+                span.setAttribute("data-event-id", event.event_id);
+                span.setAttribute("data-expanded", isRoot ? "true" : "false");
+
+                var paddingLeft = 16 + (depth * 12);
+                span.style.cssText = "border-bottom: 1px solid var(--light-border-color, #d4d4d4); cursor: pointer; transition: background-color 0.2s ease;";
+
+                // Span content
+                var spanContent = document.createElement("div");
+                spanContent.className = "span-content";
+                spanContent.style.cssText = "padding: 8px 16px 8px " + paddingLeft + "px; display: flex; align-items: center; position: relative;";
+
+                // Expand/collapse icon (only for root and events with children)
+                var expandIcon = document.createElement("span");
+                expandIcon.className = "expand-icon";
+                expandIcon.style.cssText = "margin-right: 8px; font-size: 12px; color: #586069; transition: transform 0.2s ease; cursor: pointer;";
+
+                if (isRoot || (event.children && event.children > 0)) {
+                    expandIcon.innerHTML = isRoot ? "[-]" : "[+]";
+                    expandIcon.setAttribute("data-expandable", "true");
+                } else {
+                    expandIcon.innerHTML = " • ";
+                    expandIcon.style.color = "var(--secondary-text-color, #666)";
+                }
+
+                // Service/Event name
+                var serviceName = document.createElement("span");
+                serviceName.className = "service-name";
+                serviceName.style.cssText = "font-weight: 500; margin-right: 8px; color: #24292e; font-size: 13px;";
+                serviceName.textContent = event.event_name || "Event";
+
+                // Operation name
+                var operationName = document.createElement("span");
+                operationName.className = "operation-name";
+                operationName.style.cssText = "color: #586069; font-size: 12px; margin-right: auto;";
+
+                var operationType = event.time_offset < 0 ? "root-cause" : (event.time_offset > 300 ? "cascade-effect" : "correlation");
+                operationName.textContent = operationType;
+
+                // Confidence percentage
+                var confidence = document.createElement("span");
+                confidence.className = "confidence";
+                confidence.style.cssText = "font-size: 11px; font-weight: bold; margin-right: 8px; padding: 2px 6px; border-radius: 3px;";
+
+                var confidenceValue = event.confidence_percentage || 0;
+                var confidenceColor = confidenceValue >= 70 ? "#28a745" : (confidenceValue >= 40 ? "#ffc107" : "#dc3545");
+                var confidenceTextColor = confidenceValue >= 40 ? "#fff" : "#fff";
+
+                confidence.style.backgroundColor = confidenceColor;
+                confidence.style.color = confidenceTextColor;
+                confidence.textContent = confidenceValue + "%";
+
+                // Duration/timing
+                var duration = document.createElement("span");
+                duration.className = "duration";
+                duration.style.cssText = "font-size: 11px; color: #586069; margin-right: 12px;";
+                duration.textContent = event.trace_metadata ? event.trace_metadata.relative_time : "0ms";
+
+                // Timeline bar
+                var timelineBar = document.createElement("div");
+                timelineBar.className = "timeline-bar";
+                timelineBar.style.cssText = "width: 200px; height: 6px; background: #f1f3f4; border-radius: 3px; position: relative; margin-right: 12px;";
+
+                var progressBar = document.createElement("div");
+                progressBar.className = "progress-bar";
+
+                // Calculate width and position based on timing
+                var startPercent = isRoot ? 0 : Math.max(0, ((event.time_offset + (totalDuration/2)) / totalDuration) * 100);
+                var widthPercent = isRoot ? 100 : Math.min(20, Math.abs(event.duration || 300) / totalDuration * 100);
+
+                startPercent = Math.min(80, startPercent);
+
+                var severityColors = {
+                    5: "#d73a49", 4: "#f66a0a", 3: "#ffd33d",
+                    2: "#28a745", 1: "#0366d6", 0: "#6a737d"
+                };
+
+                var barColor = severityColors[event.severity] || "#6a737d";
+
+                progressBar.style.cssText = "position: absolute; left: " + startPercent + "%; width: " + widthPercent + "%; height: 100%; background: " + barColor + "; border-radius: 3px; opacity: 0.8;";
+                timelineBar.appendChild(progressBar);
+
+                // Status indicator
+                var statusIndicator = document.createElement("span");
+                statusIndicator.className = "status-indicator";
+                statusIndicator.style.cssText = "width: 8px; height: 8px; border-radius: 50%; background: " + barColor + "; margin-right: 8px;";
+
+                // Add click handler for expand/collapse
+                span.addEventListener("click", function(e) {
+                    if (expandIcon.getAttribute("data-expandable") === "true") {
+                        var expanded = span.getAttribute("data-expanded") === "true";
+                        span.setAttribute("data-expanded", !expanded);
+                        expandIcon.innerHTML = !expanded ? "[-]" : "[+]";
+
+                        // Toggle child spans visibility
+                        toggleChildSpans(span, !expanded);
+                    }
+                });
+
+                // Add hover effects
+                span.addEventListener("mouseenter", function() {
+                    span.style.backgroundColor = "#f6f8fa";
+                });
+
+                span.addEventListener("mouseleave", function() {
+                    span.style.backgroundColor = "transparent";
+                });
+
+                // Assemble span content
+                spanContent.appendChild(expandIcon);
+                spanContent.appendChild(statusIndicator);
+                spanContent.appendChild(serviceName);
+                spanContent.appendChild(operationName);
+                spanContent.appendChild(timelineBar);
+                spanContent.appendChild(confidence);
+                spanContent.appendChild(duration);
+
+                span.appendChild(spanContent);
+
+                // Add details section (expandable)
+                if (isRoot || event.trace_metadata) {
+                    var details = document.createElement("div");
+                    details.className = "span-details";
+                    details.style.cssText = "padding: 8px 16px 8px " + (paddingLeft + 24) + "px; font-size: 11px; color: #586069; display: " + (isRoot ? "block" : "none") + ";";
+
+                    var detailsContent = "";
+                    if (event.trace_metadata) {
+                        detailsContent += "<div><strong>Timestamp:</strong> " + (event.trace_metadata.formatted_time || "Unknown") + "</div>";
+                        detailsContent += "<div><strong>Event ID:</strong> " + event.event_id + "</div>";
+                        detailsContent += "<div><strong>Severity:</strong> " + (event.severity || 0) + "</div>";
+
+                        if (event.confidence_percentage !== undefined) {
+                            detailsContent += "<div><strong>Confidence:</strong> " + event.confidence_percentage + "% (" + (event.confidence_level || "Unknown") + ")</div>";
+                        }
+
+                        if (event.trace_metadata.confidence_details) {
+                            detailsContent += "<div><strong>Criteria:</strong> " + event.trace_metadata.confidence_details + "</div>";
+                        }
+                    }
+                    if (isRoot) {
+                        detailsContent += "<div><strong>Type:</strong> Root Problem Event</div>";
+                        detailsContent += "<div><strong>Related Events:</strong> " + (event.children || 0) + "</div>";
+                    }
+
+                    details.innerHTML = detailsContent;
+                    span.appendChild(details);
+                }
+
+                return span;
+            }
+
+            /**
+             * Toggle visibility of child spans
+             */
+            function toggleChildSpans(parentSpan, show) {
+                var allSpans = parentSpan.parentNode.children;
+                var parentDepth = getSpanDepth(parentSpan);
+                var collecting = false;
+
+                for (var i = 0; i < allSpans.length; i++) {
+                    if (allSpans[i] === parentSpan) {
+                        collecting = true;
+                        continue;
+                    }
+
+                    if (collecting) {
+                        var childDepth = getSpanDepth(allSpans[i]);
+                        if (childDepth <= parentDepth) {
+                            break; // Reached sibling or parent level
+                        }
+
+                        allSpans[i].style.display = show ? "block" : "none";
+                    }
+                }
+            }
+
+            /**
+             * Get span depth from padding
+             */
+            function getSpanDepth(span) {
+                var content = span.querySelector(".span-content");
+                if (!content) return 0;
+                var paddingLeft = parseInt(content.style.paddingLeft) || 16;
+                return Math.floor((paddingLeft - 16) / 20);
+            }
+
+            /**
+             * Create group span for organizing events by confidence
+             */
+            function createGroupSpan(groupName, eventCount, depth, collapsed) {
+                var span = document.createElement("div");
+                span.className = "trace-span group-span";
+                span.setAttribute("data-group-name", groupName.toLowerCase().replace(/\s+/g, "-"));
+                span.setAttribute("data-expanded", collapsed ? "false" : "true");
+
+                var paddingLeft = 16 + (depth * 20);
+                span.style.cssText = "border-bottom: 1px solid #e1e4e8; cursor: pointer; background: #f8f9fa; font-weight: 500;";
+
+                var spanContent = document.createElement("div");
+                spanContent.className = "span-content";
+                spanContent.style.cssText = "padding: 8px 16px 8px " + paddingLeft + "px; display: flex; align-items: center;";
+
+                var expandIcon = document.createElement("span");
+                expandIcon.className = "expand-icon";
+                expandIcon.style.cssText = "margin-right: 8px; font-size: 11px; color: var(--secondary-text-color, #666); cursor: pointer; font-family: monospace;";
+                expandIcon.innerHTML = collapsed ? "[+]" : "[-]";
+
+                var groupLabel = document.createElement("span");
+                groupLabel.style.cssText = "font-weight: 600; color: #24292e; font-size: 13px;";
+                groupLabel.textContent = groupName + " (" + eventCount + ")";
+
+                span.addEventListener("click", function() {
+                    var expanded = span.getAttribute("data-expanded") === "true";
+                    span.setAttribute("data-expanded", !expanded);
+                    expandIcon.innerHTML = !expanded ? "[-]" : "[+]";
+
+                    // Toggle group visibility
+                    toggleGroupEvents(span, !expanded);
+                });
+
+                spanContent.appendChild(expandIcon);
+                spanContent.appendChild(groupLabel);
+                span.appendChild(spanContent);
+
+                return span;
+            }
+
+            /**
+             * Create "show more" span for loading additional events
+             */
+            function createShowMoreSpan(groupName, remainingCount, depth) {
+                var span = document.createElement("div");
+                span.className = "trace-span show-more-span";
+                span.setAttribute("data-group", groupName);
+
+                var paddingLeft = 16 + (depth * 20);
+                span.style.cssText = "border-bottom: 1px solid #f1f3f4; cursor: pointer; color: #586069; font-style: italic;";
+
+                var spanContent = document.createElement("div");
+                spanContent.className = "span-content";
+                spanContent.style.cssText = "padding: 6px 16px 6px " + paddingLeft + "px; display: flex; align-items: center;";
+
+                var showMoreLabel = document.createElement("span");
+                showMoreLabel.style.cssText = "font-size: 11px; color: var(--secondary-text-color, #666);";
+                showMoreLabel.textContent = "Show " + remainingCount + " more events";
+
+                span.addEventListener("click", function() {
+                    loadMoreEvents(groupName, span);
+                });
+
+                spanContent.appendChild(showMoreLabel);
+                span.appendChild(spanContent);
+
+                return span;
+            }
+
+            /**
+             * Toggle visibility of events in a group
+             */
+            function toggleGroupEvents(groupSpan, show) {
+                var groupName = groupSpan.getAttribute("data-group-name");
+                var container = groupSpan.parentNode;
+                var collecting = false;
+
+                for (var i = 0; i < container.children.length; i++) {
+                    var child = container.children[i];
+
+                    if (child === groupSpan) {
+                        collecting = true;
+                        continue;
+                    }
+
+                    if (collecting) {
+                        // Stop if we hit another group
+                        if (child.classList.contains("group-span")) {
+                            break;
+                        }
+
+                        var childGroup = child.getAttribute("data-group");
+                        if (childGroup && childGroup.includes(groupName.split("-")[0])) {
+                            child.style.display = show ? "block" : "none";
+                        }
+                    }
+                }
+            }
+
+            /**
+             * Load more events for a confidence group
+             */
+            function loadMoreEvents(groupName, showMoreSpan) {
+                // This would load more events dynamically
+                // For now, just hide the show more button
+                showMoreSpan.style.display = "none";
+            }
+
+            // Store timeline data globally for access in other functions
+            window.eventTimelineData = eventTimelineData;
 
         })();
     '
