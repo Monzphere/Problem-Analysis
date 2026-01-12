@@ -140,31 +140,31 @@ class CControllerAnalistProblemPopup extends CController {
         $related_events = [];
         if ($actual_triggerid > 0) {
             $related_events = API::Event()->get([
-                'output' => ['eventid', 'clock', 'value', 'acknowledged', 'name', 'severity'],
-                'source' => 0, // EVENT_SOURCE_TRIGGERS
-                'object' => 0, // EVENT_OBJECT_TRIGGER
+                'output'    => ['eventid', 'clock', 'value', 'acknowledged', 'name', 'severity'],
+                'source'    => 0, // EVENT_SOURCE_TRIGGERS
+                'object'    => 0, // EVENT_OBJECT_TRIGGER
                 'objectids' => $actual_triggerid,
                 'sortfield' => 'clock',
                 'sortorder' => 'DESC',
-                'limit' => 15
+                'limit'     => 20
             ]);
 
             // Fix severity for resolution events
-            // Resolution events (value = 0) should use the severity from the trigger or original problem
-            $trigger_severity = $trigger && isset($trigger['priority']) ? (int) $trigger['priority'] : 0;
-            $main_event_severity = isset($event['severity']) ? (int) $event['severity'] : 0;
+            $trigger_severity     = $trigger && isset($trigger['priority']) ? (int)$trigger['priority'] : 0;
+            $main_event_severity  = isset($event['severity']) ? (int)$event['severity'] : 0;
             $last_problem_severity = 0;
 
             // Process events in chronological order to track problem severity
             $events_chronological = array_reverse($related_events);
             foreach ($events_chronological as &$rel_event) {
                 if ($rel_event['value'] == 1) {
-                    // This is a problem event, update the last known severity
-                    $last_problem_severity = (int) $rel_event['severity'];
+                    // Problem event: update the last known severity
+                    $last_problem_severity = (int)$rel_event['severity'];
                 } else {
-                    // This is a resolution event, use the last problem severity, main event severity, or trigger severity
-                    $resolution_severity = $last_problem_severity > 0 ? $last_problem_severity :
-                                         ($main_event_severity > 0 ? $main_event_severity : $trigger_severity);
+                    // Resolution event: normalize severity
+                    $resolution_severity = $last_problem_severity > 0
+                        ? $last_problem_severity
+                        : ($main_event_severity > 0 ? $main_event_severity : $trigger_severity);
                     $rel_event['severity'] = $resolution_severity;
                 }
             }
@@ -172,6 +172,10 @@ class CControllerAnalistProblemPopup extends CController {
 
             // Restore original order (DESC)
             $related_events = array_reverse($events_chronological);
+
+            $related_events = array_filter($related_events, function($ev) {
+                return (int)$ev['value'] === 1;
+            });
         }
 
         // Get items for graphs - usar itemids do selectItems diretamente
@@ -387,21 +391,13 @@ class CControllerAnalistProblemPopup extends CController {
             'monitored' => true
         ]);
 
-        // Get dashboard count
-        // Default: no dashboards / feature not available
+        // Get dashboard count (HostDashboard API is not available in all Zabbix versions)
         $host['dashboard_count'] = 0;
-
-        // Only call if the static method exists (avoids fatal "undefined method")
         if (method_exists(API::class, 'HostDashboard')) {
-            try {
-                $host['dashboard_count'] = API::HostDashboard()->get([
-                    'countOutput' => true,
-                    'hostids'     => $host['hostid']
-                ]);
-            }
-            catch (Exception $e) {
-                // Keep default 0 on any API failure.
-            }
+            $host['dashboard_count'] = API::HostDashboard()->get([
+                'countOutput' => true,
+                'hostids' => $host['hostid']
+            ]);
         }
 
         $host['item_count'] = $db_items_count;
@@ -568,11 +564,13 @@ class CControllerAnalistProblemPopup extends CController {
 
         // Define flexible patterns for different Zabbix versions
         $metric_patterns = [
-            'CPU' => ['system.cpu.util', 'system.cpu.utilization'],
-            'Memory' => ['vm.memory.util', 'vm.memory.size[available]', 'vm.memory.size[total]'],
-            'Load' => ['system.cpu.load[percpu,avg1]', 'system.cpu.load[,avg5]', 'system.cpu.load'],
-            'Root file system' => ['vfs.fs.dependent.size[/,pused]'],
-            'Uptime' => ['system.uptime', 'system.hw.uptime[hrSystemUptime.0]']
+            //'CPU' => ['system.cpu.util', 'system.cpu.utilization'],
+            //'Memory' => ['vm.memory.util', 'vm.memory.size[available]', 'vm.memory.size[total]'],
+            //'Load' => ['system.cpu.load[percpu,avg1]', 'system.cpu.load[,avg5]', 'system.cpu.load'],
+            'Uptime' => ['system.uptime', 'system.hw.uptime[hrSystemUptime.0]'],
+            'Os' => ['vfs.file.contents[/etc/os-release]', 'system.sw.os'],
+            '/data' => ['vfs.fs.dependent.size[/data,pused]'],
+            '/' => ['vfs.fs.dependent.size[/,pused]']
         ];
 
         // Search for each category using multiple patterns
