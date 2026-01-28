@@ -19,33 +19,32 @@
     background: #014682;
 }
 
-/* Estilo para o modal quando aparecer */
-.modal-popup-large {
-    min-width: 1200px;
-    min-height: 700px;
-    max-width: 98vw;
-    max-height: 95vh;
+/* Estilo para o modal do módulo Analist Problem - escopo específico */
+.analist-problem-modal {
+    min-width: 1000px;
+    min-height: 600px;
+    max-width: 95vw;
+    max-height: 90vh;
     overflow-x: hidden;
 }
 
-/* Specifically target the overlay dialogue body only within our modal */
-.modal-popup-large .overlay-dialogue-body {
-    min-height: 650px !important;
-    max-height: 90vh !important;
-    width: 100% !important;
-    max-width: none !important;
-    overflow-y: auto !important;
-    overflow-x: hidden !important;
+/* Target the overlay dialogue body ONLY within our specific modal */
+.analist-problem-modal .overlay-dialogue-body {
+    min-height: 550px;
+    max-height: 85vh;
+    width: 100%;
+    overflow-y: auto;
+    overflow-x: hidden;
 }
 
-/* Prevent horizontal scroll in modal content */
-.modal-popup-large .event-details-popup {
+/* Prevent horizontal scroll in modal content - scoped to our module */
+.analist-problem-modal .event-details-popup {
     max-width: 100%;
     overflow-x: hidden;
     box-sizing: border-box;
 }
 
-.modal-popup-large .analisthost-container {
+.analist-problem-modal .analisthost-container {
     max-width: 100%;
     overflow-x: hidden;
 }
@@ -978,14 +977,14 @@ td:has(.js-lts-button-widget) {
         padding: 3px 6px;
     }
 
-    /* Responsive modal adjustments */
-    .modal-popup-large {
-        min-width: 95vw !important;
-        min-height: 80vh !important;
+    /* Responsive modal adjustments - scoped to our module */
+    .analist-problem-modal {
+        min-width: 95vw;
+        min-height: 80vh;
     }
 
-    .modal-popup-large .overlay-dialogue-body {
-        min-height: 75vh !important;
+    .analist-problem-modal .overlay-dialogue-body {
+        min-height: 70vh;
     }
 
     /* Responsive correlation layout */

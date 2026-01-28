@@ -442,13 +442,13 @@ document.addEventListener('DOMContentLoaded', () => {
             // Abre popup usando a função do Zabbix
             if (typeof PopUp !== 'undefined') {
                 PopUp('problemanalist.view', url, {
-                    dialogue_class: 'modal-popup-large',
+                    dialogue_class: 'analist-problem-modal',
                     draggable: true,
                     resizable: true
                 });
             } else {
                 // Fallback para abrir em nova janela
-                window.open(url, 'analist-lts', 'width=1200,height=800,scrollbars=yes,resizable=yes');
+                window.open(url, 'analist-lts', 'width=1100,height=700,scrollbars=yes,resizable=yes');
             }
         }
 
