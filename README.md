@@ -34,11 +34,3 @@ The image shows an analysis for the problem **"UNAVAILABLE BY ICMP PING"**, comp
 This module enhances incident management by providing insights into recurring issues, resolution effectiveness, and acknowledgment rates.
 
 
-<img width="1037" height="800" alt="image" src="https://github.com/user-attachments/assets/92e856d5-f86c-4e0c-ac8b-5bffc9e3acc7" />
-<img width="1043" height="693" alt="image" src="https://github.com/user-attachments/assets/a9481898-59da-44f1-98c3-b008185dfad2" />
-<img width="1040" height="684" alt="image" src="https://github.com/user-attachments/assets/82d95188-0b8f-4870-ad3b-212fc1ae5a54" />
-<img width="1039" height="774" alt="image" src="https://github.com/user-attachments/assets/8a1072e2-4c26-44a6-9501-b35a93edf52c" />
-<img width="1040" height="817" alt="image" src="https://github.com/user-attachments/assets/78f970c4-4720-4799-85b9-3dd9b91063f3" />
-<img width="1043" height="688" alt="image" src="https://github.com/user-attachments/assets/66ac6412-525d-4d14-bcad-bd6409fb6c65" />
-
-
