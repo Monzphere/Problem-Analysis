@@ -2,7 +2,7 @@
     "manifest_version": 2.0,
     "id": "analistproblem",
     "name": "Analist-Problem",
-    "version": "7.0",
+    "version": "7.1",
     "namespace": "AnalistProblem",
     "description": "This module provides a historical analysis of specific problems in Zabbix, offering a comparative report between the current and previous months. It helps users monitor issue trends and resolution efficiency.",
     "author": "Manuel Pesenti",

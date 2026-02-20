@@ -431,28 +431,63 @@ foreach ($related_events as $rel_event) {
 // Calculate weekly distribution
 $weekdays = [_('Sunday'), _('Monday'), _('Tuesday'), _('Wednesday'), _('Thursday'), _('Friday'), _('Saturday')];
 $weekly_data = [0, 0, 0, 0, 0, 0, 0];
+$pattern_events = $related_events;
+$weekly_hourly_details = array_fill(0, 7, array_fill(0, 24, 0));
+$monthly_data = [];
+$month_keys = [];
+$monthly_daily_details = [];
 
-// Generate hour labels using Zabbix localization
+$current_time = time();
+for ($i = 11; $i >= 0; $i--) {
+    $ts = strtotime("-$i months", $current_time);
+    $mk = date('Y-m', $ts);
+    $month_keys[] = $mk;
+    $monthly_data[$mk] = 0;
+    $monthly_daily_details[$mk] = array_fill(0, 31, 0);
+}
+
+// Generate hour labels following TimePattern module behavior.
+$user_lang = (CWebUser::$data && isset(CWebUser::$data['lang'])) ? CWebUser::$data['lang'] : null;
+$force_24h = in_array($user_lang, ['pt_BR', 'pt_PT']);
+$use_12h = !$force_24h && (strpos(TIME_FORMAT, 'A') !== false || strpos(TIME_FORMAT, 'a') !== false);
 $hour_labels = [];
 for ($h = 0; $h < 24; $h++) {
-    // Use Zabbix's time formatting to get localized hour labels
-    $timestamp = mktime($h, 0, 0, 1, 1, 2000); // Arbitrary date with specific hour
-
-    // Try different formatting approaches to match Zabbix native behavior
-    if (function_exists('zbx_date2str')) {
-        $hour_str = zbx_date2str('g a', $timestamp); // 'g a' format: 12 am, 1 am, etc.
-        $hour_labels[] = str_replace(' ', '', strtolower($hour_str)); // Remove space and lowercase: 12am, 1am, etc.
-    } else {
-        // Fallback if zbx_date2str not available
-        $hour_str = date('g a', $timestamp);
-        $hour_labels[] = str_replace(' ', '', strtolower($hour_str));
-    }
+    $ts_utc = gmmktime($h, 0, 0, 1, 1, 2024);
+    $hour_labels[] = $use_12h
+        ? zbx_date2str('g a', $ts_utc, 'UTC')
+        : (zbx_date2str('H', $ts_utc, 'UTC') . _x('h', 'hour short'));
 }
 
 foreach ($related_events as $rel_event) {
     $weekday = date('w', $rel_event['clock']);
     $weekly_data[(int)$weekday]++;
+
+    $clock = (int) $rel_event['clock'];
+    $hour = (int) date('G', $clock);
+    $mk = date('Y-m', $clock);
+    $day = (int) date('j', $clock);
+    $weekly_hourly_details[(int)$weekday][$hour]++;
+
+    if (isset($monthly_data[$mk])) {
+        $monthly_data[$mk]++;
+    }
+
+    if (isset($monthly_daily_details[$mk][$day - 1])) {
+        $monthly_daily_details[$mk][$day - 1]++;
+    }
 }
+
+$monthly_labels = [];
+$monthly_values = [];
+$monthly_drilldown = [];
+foreach ($month_keys as $mk) {
+    $ts = strtotime($mk . '-01');
+    $monthly_labels[] = zbx_date2str('M/y', $ts);
+    $monthly_values[] = $monthly_data[$mk] ?? 0;
+    $monthly_drilldown[] = array_values($monthly_daily_details[$mk] ?? array_fill(0, 31, 0));
+}
+
+$event_clocks = array_column($pattern_events, 'clock');
 
 // Create containers for D3.js charts
 $patterns_container = new CDiv();
@@ -465,24 +500,81 @@ $description_container->addItem(new CTag('h6', false, _('Overview  based on dail
 
 // Hourly pattern container
 $hourly_container = new CDiv();
-$hourly_container->addClass('pattern-chart-container');
-$hourly_container->addItem(new CTag('h4', false, _('Hourly Pattern')));
+$hourly_container->addClass('pattern-chart-container mnz-pattern-collapsible');
+$hourly_header = new CDiv([
+    (new CTag('h4', false, _('Hourly Pattern')))->addClass('mnz-incident-chart-title'),
+    (new CButton('mnz-hourly-toggle', _('Expand')))
+        ->addClass('btn btn-alt mnz-pattern-toggle')
+        ->setAttribute('data-target', 'mnz-hourly-pattern-body')
+]);
+$hourly_header->addClass('mnz-pattern-collapsible-header');
 $hourly_chart = new CDiv();
 $hourly_chart->setId('hourly-pattern-chart');
 $hourly_chart->addClass('pattern-chart');
-$hourly_container->addItem($hourly_chart);
+$hourly_body = (new CDiv($hourly_chart))
+    ->setId('mnz-hourly-pattern-body')
+    ->addClass('mnz-pattern-collapsible-body')
+    ->addStyle('display:none;');
+$hourly_container->addItem([$hourly_header, $hourly_body]);
 
 // Weekly pattern container
 $weekly_container = new CDiv();
-$weekly_container->addClass('pattern-chart-container');
-$weekly_container->addItem(new CTag('h4', false, _('Weekly Pattern')));
+$weekly_container->addClass('pattern-chart-container mnz-pattern-collapsible');
+$weekly_header = new CDiv([
+    (new CTag('h4', false, _('Weekly Pattern')))->addClass('mnz-incident-chart-title'),
+    (new CButton('mnz-weekly-toggle', _('Expand')))
+        ->addClass('btn btn-alt mnz-pattern-toggle')
+        ->setAttribute('data-target', 'mnz-weekly-pattern-body')
+]);
+$weekly_header->addClass('mnz-pattern-collapsible-header');
 $weekly_chart = new CDiv();
 $weekly_chart->setId('weekly-pattern-chart');
 $weekly_chart->addClass('pattern-chart');
-$weekly_container->addItem($weekly_chart);
+$weekly_body = (new CDiv($weekly_chart))
+    ->setId('mnz-weekly-pattern-body')
+    ->addClass('mnz-pattern-collapsible-body')
+    ->addStyle('display:none;');
+$weekly_container->addItem([$weekly_header, $weekly_body]);
 
+$filter_bar = (new CDiv())
+    ->setId('mnz-investigation-filter-bar')
+    ->addClass('mnz-investigation-filter-bar');
 
-$patterns_container->addItem([$description_container, $hourly_container, $weekly_container]);
+$heatmap_container = (new CDiv())
+    ->setId('mnz-investigation-heatmap')
+    ->addClass('mnz-heatmap-container');
+
+$heatmap_section = (new CDiv([
+    (new CTag('h4', false, _('Incident heatmap (day x hour)')))->addClass('mnz-incident-chart-title'),
+    (new CDiv(_('Click a cell to filter all charts')))->addClass('mnz-drilldown-hint'),
+    $heatmap_container
+]))->addClass('mnz-incident-chart-container');
+
+$monthly_chart = (new CDiv())
+    ->setId('mnz-investigation-monthly-chart')
+    ->addClass('mnz-incident-chart mnz-incident-chart-monthly');
+
+$monthly_drilldown_container = (new CDiv())
+    ->setId('mnz-monthly-drilldown')
+    ->addClass('mnz-investigation-drilldown')
+    ->addItem((new CDiv(_('Click a month to see which days had the most incidents')))
+        ->addClass('mnz-drilldown-hint')
+        ->addClass('mnz-drilldown-hint-monthly'));
+
+$monthly_container = (new CDiv([
+    (new CTag('h4', false, _('Last 12 months')))->addClass('mnz-incident-chart-title'),
+    $monthly_chart,
+    $monthly_drilldown_container
+]))->addClass('mnz-incident-chart-container');
+
+$patterns_container->addItem([
+    $description_container,
+    $filter_bar,
+    $heatmap_section,
+    $monthly_container,
+    $hourly_container,
+    $weekly_container
+]);
 $time_patterns_div->addItem($patterns_container);
 
 $tabs->addTab('patterns', _('Time Patterns'), $time_patterns_div);
@@ -494,14 +586,14 @@ $graphs_div = new CDiv();
 if ($items && isset($event['clock'])) {
     // --- Fixed time windows relative to the incident
     $event_ts    = (int)$event['clock'];
-    $from_1h_ts  = $event_ts - 3600;          // 1 hour before incident
+    $from_6h_ts  = $event_ts - 21600;         // 6 hours before incident
 
     // UI strings (respect user TZ + 24h settings)
-    $from_1h_ui  = zbx_date2str(DATE_TIME_FORMAT_SECONDS, $from_1h_ts);
+    $from_6h_ui  = zbx_date2str(DATE_TIME_FORMAT_SECONDS, $from_6h_ts);
     $event_ui    = zbx_date2str(DATE_TIME_FORMAT_SECONDS, $event_ts);
 
     // chart.php expects absolute datetime strings (server-side parsing)
-    $from_1h_param = date('Y-m-d H:i:s', $from_1h_ts);
+    $from_6h_param = date('Y-m-d H:i:s', $from_6h_ts);
     $event_param   = date('Y-m-d H:i:s', $event_ts);
     $to_now_param  = 'now';
 
@@ -509,10 +601,10 @@ if ($items && isset($event['clock'])) {
     $charts_container = new CDiv();
     $charts_container->addClass('charts-container');
 
-    // Period info: (1) 1h before → incident, (2) incident → now
+    // Period info: (1) 6h before → now, (2) incident → now
     $period_info = new CDiv(sprintf(
         '%s: %s → %s | %s: %s → %s',
-        _('1h window'), $from_1h_ui, $event_ui,
+        _('6h window'), $from_6h_ui, $event_ui,
         _('From incident'), $event_ui, _('now')
     ));
     $period_info->addClass('period-info');
@@ -589,13 +681,13 @@ if ($items && isset($event['clock'])) {
             $charts_container->addItem($items_list);
         }
 
-        // 1) 1h before incident → incident time
-        $title_1h = (count($item_names) === 1)
-            ? $item_names[0] . ' (' . _('1h around incident') . ')'
-            : _('Combined metrics') . ' (' . _('1h around incident') . ', ' . count($unique_itemids) . ' ' . _('items') . ')';
+        // 1) 6h before incident → now
+        $title_6h = (count($item_names) === 1)
+            ? $item_names[0] . ' (' . _('6h around incident') . ')'
+            : _('Combined metrics') . ' (' . _('6h around incident') . ', ' . count($unique_itemids) . ' ' . _('items') . ')';
 
         $charts_container->addItem(
-            $build_consolidated_chart($unique_itemids, $from_1h_param, $event_param, $title_1h, 800, 300)
+            $build_consolidated_chart($unique_itemids, $from_6h_param, $event_param, $title_6h, 800, 300)
         );
 
         // 2) From incident → now
@@ -989,6 +1081,21 @@ $output = [
             var weeklyData = ' . json_encode(array_values($weekly_data)) . ';
             var weekdayLabels = ' . json_encode($weekdays) . ';
             var hourLabels = ' . json_encode($hour_labels) . ';
+            var timePatternData = {
+                eventClocks: ' . json_encode($event_clocks) . ',
+                monthKeys: ' . json_encode($month_keys) . ',
+                monthLabels: ' . json_encode($monthly_labels) . ',
+                dayLabels: ' . json_encode(range(1, 31)) . ',
+                weekLabels: ' . json_encode($weekdays) . ',
+                hourLabels: ' . json_encode($hour_labels) . ',
+                hintMonth: "' . addslashes(_('Click a month to see which days had the most incidents')) . '",
+                hintDay: "' . addslashes(_('Click a day to see hourly distribution in heatmap')) . '",
+                filteredBy: "' . addslashes(_('Filtered by')) . '",
+                clearFilter: "' . addslashes(_('Clear filter')) . '",
+                sameSlotLastWeek: "' . addslashes(_('Same slot last week')) . '",
+                sameDayLastWeek: "' . addslashes(_('Same day last week')) . '",
+                incidents: "' . addslashes(_('incidents')) . '"
+            };
 
             // Event data for services loading
             window.currentEventData = {
@@ -1168,6 +1275,359 @@ $output = [
                 }
             };
 
+            var initAdvancedTimePatterns = function() {
+                var d = timePatternData;
+                if (!d || !jQuery("#mnz-investigation-heatmap").length || !jQuery("#mnz-investigation-monthly-chart").length) {
+                    return;
+                }
+
+                var clocks = (d.eventClocks || []).map(function(t) { return parseInt(t, 10); }).filter(function(t) { return !isNaN(t); });
+                var monthKeys = d.monthKeys || [];
+                var isDark = document.body.getAttribute("theme") === "dark-theme" || document.documentElement.getAttribute("theme") === "dark-theme";
+                var barBg = isDark ? "#3a3a3a" : "#e9ecef";
+                var barFill = "#0275b8";
+                var textColor = isDark ? "#e0e0e0" : "#333333";
+                var labelColor = isDark ? "#999999" : "#666666";
+
+                var currentFilter = null;
+                var currentAgg = null;
+
+                var computeAggregates = function(clockList) {
+                    var hourly = [];
+                    var weekly = [];
+                    var weeklyHourly = [];
+                    var monthly = {};
+                    var monthlyDaily = {};
+
+                    for (var h = 0; h < 24; h++) hourly[h] = 0;
+                    for (var w = 0; w < 7; w++) {
+                        weekly[w] = 0;
+                        weeklyHourly[w] = [];
+                        for (h = 0; h < 24; h++) weeklyHourly[w][h] = 0;
+                    }
+
+                    for (var m = 0; m < monthKeys.length; m++) {
+                        monthly[monthKeys[m]] = 0;
+                        monthlyDaily[monthKeys[m]] = [];
+                        for (var day = 0; day < 31; day++) monthlyDaily[monthKeys[m]][day] = 0;
+                    }
+
+                    for (var i = 0; i < clockList.length; i++) {
+                        var t = clockList[i];
+                        var dt = new Date(t * 1000);
+                        var hour = dt.getHours();
+                        var weekday = dt.getDay();
+                        var ym = dt.getFullYear() + "-" + String(dt.getMonth() + 1).padStart(2, "0");
+                        var dIdx = dt.getDate() - 1;
+
+                        hourly[hour]++;
+                        weekly[weekday]++;
+                        if (weeklyHourly[weekday]) weeklyHourly[weekday][hour]++;
+                        if (monthly[ym] !== undefined) {
+                            monthly[ym]++;
+                            if (monthlyDaily[ym] && dIdx >= 0 && dIdx < 31) monthlyDaily[ym][dIdx]++;
+                        }
+                    }
+
+                    var monthVals = [];
+                    var monthDrill = [];
+                    for (m = 0; m < monthKeys.length; m++) {
+                        var mk = monthKeys[m];
+                        monthVals.push(monthly[mk] || 0);
+                        monthDrill.push(monthlyDaily[mk] ? monthlyDaily[mk].slice(0, 31) : []);
+                    }
+
+                    return {
+                        hourly: hourly,
+                        weekly: weekly,
+                        monthly: monthVals,
+                        weeklyHourlyDetails: weeklyHourly,
+                        monthlyDailyDetails: monthDrill
+                    };
+                };
+
+                var renderHeatmap = function(agg) {
+                    var el = document.getElementById("mnz-investigation-heatmap");
+                    if (!el) return;
+
+                    var wh = agg.weeklyHourlyDetails || [];
+                    var weekDisplayOrder = [1, 2, 3, 4, 5, 6, 0]; // Monday first, Sunday last
+                    var maxVal = 0;
+                    for (var w = 0; w < 7; w++) {
+                        for (var h = 0; h < 24; h++) {
+                            if (wh[w] && wh[w][h] > maxVal) maxVal = wh[w][h];
+                        }
+                    }
+                    if (maxVal === 0) maxVal = 1;
+
+                    var html = "<div class=\"mnz-heatmap-grid\"><div class=\"mnz-heatmap-labels-col\"><div class=\"mnz-heatmap-corner\"></div>";
+                    for (var wi = 0; wi < 7; wi++) {
+                        var weekdayIdx = weekDisplayOrder[wi];
+                        html += "<div class=\"mnz-heatmap-row-label\">" + (d.weekLabels[weekdayIdx] || "") + "</div>";
+                    }
+                    html += "</div><div class=\"mnz-heatmap-body\"><div class=\"mnz-heatmap-hours-row\">";
+                    for (h = 0; h < 24; h++) html += "<div class=\"mnz-heatmap-hour-label\">" + (d.hourLabels[h] || h) + "</div>";
+                    html += "</div>";
+
+                    for (wi = 0; wi < 7; wi++) {
+                        var rowWeekday = weekDisplayOrder[wi];
+                        html += "<div class=\"mnz-heatmap-row\">";
+                        for (h = 0; h < 24; h++) {
+                            var v = (wh[rowWeekday] && wh[rowWeekday][h]) || 0;
+                            var intensity = v / maxVal;
+                            var color = intensity > 0 ? (intensity > 0.5 ? (intensity > 0.8 ? "#c0392b" : "#e67e22") : "#27ae60") : barBg;
+                            var cls = v > 0 ? " mnz-heatmap-cell-active" : "";
+                            html += "<div class=\"mnz-heatmap-cell" + cls + "\" data-w=\"" + rowWeekday + "\" data-h=\"" + h + "\" style=\"background:" + color + "\" title=\"" + (d.weekLabels[rowWeekday] || "") + " " + (d.hourLabels[h] || h) + ": " + v + "\">" + v + "</div>";
+                        }
+                        html += "</div>";
+                    }
+
+                    html += "</div></div>";
+                    el.innerHTML = html;
+
+                    jQuery("#mnz-investigation-heatmap").off("click", ".mnz-heatmap-cell-active").on("click", ".mnz-heatmap-cell-active", function() {
+                        var center = jQuery(this);
+                        var weekday = parseInt(center.data("w"), 10);
+                        var hour = parseInt(center.data("h"), 10);
+                        var filtered = clocks.filter(function(t) {
+                            var dt = new Date(t * 1000);
+                            return dt.getDay() === weekday && dt.getHours() === hour;
+                        });
+                        currentFilter = {type: "heatmap", weekday: weekday, hour: hour};
+                        currentAgg = computeAggregates(filtered);
+                        applyAndRender();
+                    });
+                };
+
+                var renderMonthly = function(elId, data, labels) {
+                    var el = document.getElementById(elId);
+                    if (!el) return;
+                    var max = Math.max.apply(Math, data);
+                    if (max === 0) max = 1;
+
+                    var html = "<div class=\"mnz-investigation-monthly-bars\">";
+                    for (var i = 0; i < data.length; i++) {
+                        var h = (data[i] / max) * 100;
+                        var col = data[i] > 0 ? (i === data.length - 1 ? "#ff9800" : barFill) : barBg;
+                        var cls = data[i] > 0 ? " mnz-bar-clickable" : "";
+
+                        html += "<div class=\"mnz-investigation-monthly-item" + cls + "\" data-index=\"" + i + "\" data-type=\"monthly\" title=\"" + labels[i] + ": " + data[i] + "\">";
+                        html += "<div style=\"font-size:11px;font-weight:bold;color:" + textColor + "\">" + data[i] + "</div>";
+                        html += "<div class=\"mnz-investigation-monthly-bar\" style=\"height:" + Math.max(h, 4) + "px;background:" + col + "\"></div>";
+                        html += "<span class=\"mnz-investigation-monthly-label\" style=\"color:" + labelColor + "\">" + labels[i] + "</span>";
+                        html += "</div>";
+                    }
+                    html += "</div>";
+                    el.innerHTML = html;
+                };
+
+                var renderDrilldown = function(containerId, data, labels, title, barColor) {
+                    var c = document.getElementById(containerId);
+                    if (!c) return;
+                    var max = Math.max.apply(Math, data);
+                    if (max === 0) max = 1;
+
+                    var html = "<div class=\"mnz-drilldown-content\"><div class=\"mnz-drilldown-title\">" + title + "</div><div class=\"mnz-drilldown-subhint\">" + (d.hintDay || "") + "</div><div class=\"mnz-drilldown-chart\"><div class=\"mnz-investigation-bars\">";
+                    for (var i = 0; i < data.length; i++) {
+                        var barH = (data[i] / max) * 80;
+                        var day = i + 1;
+                        var cls = data[i] > 0 ? " mnz-drilldown-day-bar mnz-bar-clickable" : "";
+                        var dayData = data[i] > 0 ? " data-day=\"" + day + "\"" : "";
+                        html += "<div class=\"mnz-investigation-bar-item mnz-drilldown-bar-item" + cls + "\"" + dayData + " title=\"" + labels[i] + ": " + data[i] + "\">";
+                        html += "<span class=\"mnz-drilldown-bar-value\">" + data[i] + "</span>";
+                        html += "<div class=\"mnz-investigation-bar\" style=\"height:" + Math.max(barH, 4) + "px;background:" + (data[i] > 0 ? barColor : barBg) + "\"></div>";
+                        html += "<span class=\"mnz-investigation-bar-label\">" + labels[i] + "</span>";
+                        html += "</div>";
+                    }
+                    html += "</div></div><button type=\"button\" class=\"btn btn-alt mnz-drilldown-close\">Close</button></div>";
+                    c.innerHTML = html;
+                    c.classList.add("mnz-drilldown-visible");
+                };
+
+                var countSameSlotLastWeek = function(weekday, hour) {
+                    var now = Math.floor(Date.now() / 1000);
+                    var weekSec = 604800;
+                    var lastWeekEnd = now - weekSec;
+                    var lastWeekStart = lastWeekEnd - weekSec;
+                    var n = 0;
+
+                    for (var i = 0; i < clocks.length; i++) {
+                        var t = clocks[i];
+                        if (t >= lastWeekStart && t < lastWeekEnd) {
+                            var dt = new Date(t * 1000);
+                            if (dt.getDay() === weekday && dt.getHours() === hour) n++;
+                        }
+                    }
+
+                    return n;
+                };
+
+                var countSameDayLastWeek = function(weekday) {
+                    var now = Math.floor(Date.now() / 1000);
+                    var weekSec = 604800;
+                    var lastWeekEnd = now - weekSec;
+                    var lastWeekStart = lastWeekEnd - weekSec;
+                    var n = 0;
+
+                    for (var i = 0; i < clocks.length; i++) {
+                        var t = clocks[i];
+                        if (t >= lastWeekStart && t < lastWeekEnd) {
+                            var dt = new Date(t * 1000);
+                            if (dt.getDay() === weekday) n++;
+                        }
+                    }
+
+                    return n;
+                };
+
+                var updateFilterBar = function() {
+                    var fb = document.getElementById("mnz-investigation-filter-bar");
+                    if (!fb) return;
+
+                    if (!currentFilter) {
+                        fb.innerHTML = "";
+                        fb.classList.remove("mnz-filter-active");
+                        return;
+                    }
+
+                    var label = "";
+                    var compHtml = "";
+                    if (currentFilter.type === "month") {
+                        label = (d.monthLabels || [])[currentFilter.value] || "";
+                    }
+                    else if (currentFilter.type === "day") {
+                        label = (currentFilter.dateStr || "") + " (" + ((d.weekLabels || [])[currentFilter.weekday] || "") + ")";
+                        var lastWeek = countSameDayLastWeek(currentFilter.weekday);
+                        compHtml = " <span class=\"mnz-filter-comparison\">" + (d.sameDayLastWeek || "") + ": " + lastWeek + " " + (d.incidents || "incidents") + "</span>";
+                    }
+                    else if (currentFilter.type === "heatmap") {
+                        label = (d.weekLabels || [])[currentFilter.weekday] + " " + ((d.hourLabels || [])[currentFilter.hour] || (currentFilter.hour + "h"));
+                        var slotWeek = countSameSlotLastWeek(currentFilter.weekday, currentFilter.hour);
+                        compHtml = " <span class=\"mnz-filter-comparison\">" + (d.sameSlotLastWeek || "") + ": " + slotWeek + " " + (d.incidents || "incidents") + "</span>";
+                    }
+
+                    fb.classList.add("mnz-filter-active");
+                    fb.innerHTML = "<span class=\"mnz-filter-label\">" + (d.filteredBy || "Filtered by") + ": " + label + "</span>" + compHtml + " <button type=\"button\" class=\"btn btn-alt mnz-filter-clear\">" + (d.clearFilter || "Clear filter") + "</button>";
+
+                    jQuery("#mnz-investigation-filter-bar .mnz-filter-clear").off("click").on("click", function() {
+                        currentFilter = null;
+                        currentAgg = computeAggregates(clocks);
+                        var m = jQuery("#mnz-monthly-drilldown");
+                        m.removeClass("mnz-drilldown-visible").empty().append("<div class=\"mnz-drilldown-hint mnz-drilldown-hint-monthly\">" + (d.hintMonth || "") + "</div>");
+                        applyAndRender();
+                    });
+                };
+
+                var applyAndRender = function() {
+                    currentAgg = currentAgg || computeAggregates(clocks);
+
+                    createCSSBarChart("#hourly-pattern-chart", currentAgg.hourly, d.hourLabels || hourLabels, "#0275b8");
+                    createCSSBarChart("#weekly-pattern-chart", currentAgg.weekly, d.weekLabels || weekdayLabels, "#28a745");
+                    renderHeatmap(currentAgg);
+                    renderMonthly("mnz-investigation-monthly-chart", currentAgg.monthly, d.monthLabels || []);
+
+                    var dayLabels = (d.dayLabels && d.dayLabels.length) ? d.dayLabels.slice(0) : [];
+                    while (dayLabels.length < 31) dayLabels.push(dayLabels.length + 1);
+
+                    jQuery("#mnz-investigation-monthly-chart").off("click", ".mnz-bar-clickable").on("click", ".mnz-bar-clickable", function() {
+                        var idx = parseInt(jQuery(this).data("index"), 10);
+                        var mk = monthKeys[idx];
+                        if (!mk) return;
+
+                        var filtered = clocks.filter(function(t) {
+                            var dt = new Date(t * 1000);
+                            return dt.getFullYear() + "-" + String(dt.getMonth() + 1).padStart(2, "0") === mk;
+                        });
+                        currentFilter = {type: "month", value: idx};
+                        currentAgg = computeAggregates(filtered);
+                        applyAndRender();
+
+                        var dd = currentAgg.monthlyDailyDetails[idx];
+                        if (dd) {
+                            renderDrilldown("mnz-monthly-drilldown", dd, dayLabels, "Daily distribution - " + (d.monthLabels[idx] || ""), barFill);
+                            jQuery("#mnz-monthly-drilldown .mnz-drilldown-close").off("click").on("click", function() {
+                                var c = jQuery("#mnz-monthly-drilldown");
+                                c.removeClass("mnz-drilldown-visible").empty().append("<div class=\"mnz-drilldown-hint mnz-drilldown-hint-monthly\">" + (d.hintMonth || "") + "</div>");
+                            });
+                        }
+
+                        jQuery("#mnz-monthly-drilldown").off("click", ".mnz-drilldown-day-bar").on("click", ".mnz-drilldown-day-bar", function() {
+                            var day = parseInt(jQuery(this).data("day"), 10);
+                            if (!day) return;
+
+                            var dateStr = mk + "-" + String(day).padStart(2, "0");
+                            var dayFiltered = clocks.filter(function(t) {
+                                var dt = new Date(t * 1000);
+                                var ds = dt.getFullYear() + "-" + String(dt.getMonth() + 1).padStart(2, "0") + "-" + String(dt.getDate()).padStart(2, "0");
+                                return ds === dateStr;
+                            });
+
+                            var parts = dateStr.split("-");
+                            var sampleDate = new Date(parseInt(parts[0], 10), parseInt(parts[1], 10) - 1, parseInt(parts[2], 10));
+                            var weekday = sampleDate.getDay();
+                            var hourly = [];
+                            var wh = [];
+                            for (var h = 0; h < 24; h++) hourly[h] = 0;
+                            for (var w = 0; w < 7; w++) {
+                                wh[w] = [];
+                                for (h = 0; h < 24; h++) wh[w][h] = 0;
+                            }
+                            for (var cIdx = 0; cIdx < dayFiltered.length; cIdx++) {
+                                var dtf = new Date(dayFiltered[cIdx] * 1000);
+                                hourly[dtf.getHours()]++;
+                            }
+                            for (h = 0; h < 24; h++) wh[weekday][h] = hourly[h];
+
+                            currentFilter = {type: "day", monthIdx: idx, day: day, weekday: weekday, dateStr: dateStr};
+                            currentAgg = {
+                                hourly: hourly,
+                                weekly: [0, 0, 0, 0, 0, 0, 0],
+                                monthly: currentAgg.monthly,
+                                weeklyHourlyDetails: wh,
+                                monthlyDailyDetails: currentAgg.monthlyDailyDetails
+                            };
+
+                            createCSSBarChart("#hourly-pattern-chart", currentAgg.hourly, d.hourLabels || hourLabels, "#0275b8");
+                            renderHeatmap(currentAgg);
+                            updateFilterBar();
+                            jQuery("html, body").animate({scrollTop: jQuery("#mnz-investigation-heatmap").offset().top - 80}, 300);
+                        });
+                    });
+
+                    updateFilterBar();
+                };
+
+                currentAgg = computeAggregates(clocks);
+                applyAndRender();
+            };
+
+            var initPatternCollapsibles = function() {
+                var expandText = "' . addslashes(_('Expand')) . '";
+                var collapseText = "' . addslashes(_('Collapse')) . '";
+
+                jQuery(".mnz-pattern-toggle").off("click").on("click", function(e) {
+                    e.preventDefault();
+                    var $btn = jQuery(this);
+                    var targetId = $btn.data("target");
+                    var $body = jQuery("#" + targetId);
+                    if (!$body.length) {
+                        return;
+                    }
+
+                    var isVisible = $body.is(":visible");
+                    if (isVisible) {
+                        $body.slideUp(120);
+                        $btn.text(expandText);
+                    } else {
+                        $body.slideDown(120, function() {
+                            createPatternCharts();
+                            initAdvancedTimePatterns();
+                        });
+                        $btn.text(collapseText);
+                    }
+                });
+            };
+
             // Wait for DOM and jQuery UI to be ready
             var initTabs = function() {
                 var $tabs = jQuery("#event-details-tabs");
@@ -1180,6 +1640,7 @@ $output = [
                                     // Recreate D3 charts when patterns tab is activated
                                     if (ui.newPanel.attr("id") === "ui-id-2") {
                                         setTimeout(createPatternCharts, 100);
+                                        setTimeout(initAdvancedTimePatterns, 120);
                                     }
 
                                 }
@@ -1198,10 +1659,14 @@ $output = [
                 // Create D3 charts initially and when patterns tab becomes visible
                 setTimeout(function() {
                     createPatternCharts();
+                    initAdvancedTimePatterns();
+                    initPatternCollapsibles();
                     // Also try to create when patterns tab becomes visible
                     jQuery("#event-details-tabs").on("tabsactivate", function(event, ui) {
                         if (ui.newPanel.find("#hourly-pattern-chart").length > 0) {
                             setTimeout(createPatternCharts, 50);
+                            setTimeout(initAdvancedTimePatterns, 80);
+                            setTimeout(initPatternCollapsibles, 90);
                         }
                         // Load services when services tab is activated
                         if (ui.newPanel.find("#services-tree-container").length > 0) {
@@ -1278,6 +1743,9 @@ $output = [
                                 setTimeout(createPatternCharts, 50);
                                 setTimeout(createPatternCharts, 200);
                                 setTimeout(createPatternCharts, 500);
+                                setTimeout(initAdvancedTimePatterns, 100);
+                                setTimeout(initAdvancedTimePatterns, 300);
+                                setTimeout(initPatternCollapsibles, 110);
                             }
 
                             // Load services when services tab is shown
@@ -1329,6 +1797,9 @@ $output = [
                     setTimeout(createPatternCharts, 500);
                     setTimeout(createPatternCharts, 1000);
                     setTimeout(createPatternCharts, 2000);
+                    setTimeout(initAdvancedTimePatterns, 700);
+                    setTimeout(initAdvancedTimePatterns, 1200);
+                    setTimeout(initPatternCollapsibles, 400);
                 });
 
                 // And on window load as last resort
@@ -1336,6 +1807,8 @@ $output = [
                     setTimeout(initTabs, 300);
                     setTimeout(createPatternCharts, 800);
                     setTimeout(createPatternCharts, 1500);
+                    setTimeout(initAdvancedTimePatterns, 900);
+                    setTimeout(initPatternCollapsibles, 500);
                 });
 
                 // Watch for tab visibility changes
@@ -1343,12 +1816,16 @@ $output = [
 
                     setTimeout(createPatternCharts, 100);
                     setTimeout(createPatternCharts, 300);
+                    setTimeout(initAdvancedTimePatterns, 140);
+                    setTimeout(initPatternCollapsibles, 160);
                 });
 
             } else {
                 // Fallback if jQuery not ready
                 setTimeout(initTabs, 500);
                 setTimeout(createPatternCharts, 1000);
+                setTimeout(initAdvancedTimePatterns, 1200);
+                setTimeout(initPatternCollapsibles, 1300);
                 setTimeout(function() {
                     if (window.loadImpactedServices) {
                         window.loadImpactedServices();

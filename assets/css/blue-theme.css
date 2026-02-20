@@ -649,3 +649,279 @@ td:has(.js-lts-button-widget) {
     }
 }
 
+/* Time Patterns tab enhancements (ported from TimePattern module, without SLA block) */
+.mnz-incident-chart-container {
+    padding: 15px;
+    background: rgba(0, 0, 0, 0.02);
+    border-radius: 6px;
+    display: flex;
+    flex-direction: column;
+    margin-top: 12px;
+}
+
+.mnz-incident-chart-title {
+    margin: 0 0 10px 0;
+    font-size: 13px;
+    font-weight: 600;
+}
+
+.mnz-incident-chart {
+    min-height: 120px;
+}
+
+.mnz-incident-chart-monthly {
+    min-height: 140px;
+}
+
+.mnz-investigation-filter-bar {
+    display: none;
+    margin-top: 12px;
+    margin-bottom: 12px;
+    padding: 10px 15px;
+    background: rgba(2, 117, 184, 0.1);
+    border-radius: 6px;
+    align-items: center;
+    gap: 12px;
+}
+
+.mnz-investigation-filter-bar.mnz-filter-active {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 8px 16px;
+}
+
+.mnz-filter-label {
+    font-size: 13px;
+    font-weight: 600;
+    color: #0275b8;
+}
+
+.mnz-filter-comparison {
+    font-size: 12px;
+    color: #6c757d;
+    font-style: italic;
+}
+
+.mnz-investigation-bars {
+    display: flex;
+    align-items: flex-end;
+    gap: 4px;
+    height: 100px;
+}
+
+.mnz-investigation-monthly-bars {
+    display: flex;
+    align-items: flex-end;
+    gap: 4px;
+    min-height: 120px;
+    padding-top: 24px;
+}
+
+.mnz-investigation-bar-item {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    flex: 1;
+    min-width: 0;
+}
+
+.mnz-investigation-bar {
+    width: 100%;
+    max-width: 24px;
+    border-radius: 3px 3px 0 0;
+}
+
+.mnz-investigation-bar-label {
+    font-size: 9px;
+    margin-top: 4px;
+    color: #666;
+    text-align: center;
+}
+
+.mnz-investigation-monthly-item {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    flex: 1;
+    min-width: 0;
+}
+
+.mnz-investigation-monthly-bar {
+    width: 100%;
+    max-width: 40px;
+    border-radius: 3px 3px 0 0;
+    margin-top: 4px;
+}
+
+.mnz-investigation-monthly-label {
+    font-size: 9px;
+    margin-top: 6px;
+    text-align: center;
+}
+
+
+.mnz-heatmap-container {
+    display: flex;
+    justify-content: center;
+    overflow-x: auto;
+    padding: 16px 0;
+}
+
+.mnz-heatmap-grid {
+    display: flex;
+    gap: 0;
+    min-width: min-content;
+}
+
+.mnz-heatmap-labels-col {
+    display: flex;
+    flex-direction: column;
+    flex-shrink: 0;
+}
+
+.mnz-heatmap-corner {
+    width: 56px;
+    height: 28px;
+    flex-shrink: 0;
+}
+
+.mnz-heatmap-row-label {
+    width: 56px;
+    height: 32px;
+    margin: 2px 0;
+    display: flex;
+    align-items: center;
+    font-size: 12px;
+    font-weight: 600;
+    color: #555;
+    padding-right: 8px;
+}
+
+.mnz-heatmap-body {
+    display: flex;
+    flex-direction: column;
+}
+
+.mnz-heatmap-hours-row {
+    display: flex;
+    height: 28px;
+}
+
+.mnz-heatmap-hour-label {
+    width: 32px;
+    margin: 0 2px;
+    font-size: 11px;
+    text-align: center;
+    color: #666;
+    flex-shrink: 0;
+}
+
+.mnz-heatmap-row {
+    display: flex;
+}
+
+.mnz-heatmap-cell {
+    width: 32px;
+    height: 32px;
+    flex-shrink: 0;
+    font-size: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #fff;
+    text-shadow: 0 0 2px rgba(0, 0, 0, 0.5);
+    border-radius: 3px;
+    margin: 2px;
+}
+
+.mnz-heatmap-cell-active {
+    cursor: pointer;
+    transition: transform 0.15s, box-shadow 0.15s;
+}
+
+.mnz-heatmap-cell-active:hover {
+    transform: scale(1.1);
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.3);
+}
+
+.mnz-investigation-drilldown {
+    margin-top: 15px;
+    padding: 15px;
+    background: rgba(0, 0, 0, 0.03);
+    border-radius: 6px;
+    display: none;
+}
+
+.mnz-investigation-drilldown.mnz-drilldown-visible {
+    display: block;
+}
+
+.mnz-drilldown-hint {
+    font-size: 12px;
+    color: #6c757d;
+    font-style: italic;
+}
+
+.mnz-drilldown-content {
+    margin-top: 10px;
+}
+
+.mnz-drilldown-title {
+    font-weight: 600;
+    font-size: 13px;
+    margin-bottom: 8px;
+}
+
+.mnz-drilldown-subhint {
+    font-size: 11px;
+    color: #6c757d;
+    font-style: italic;
+    margin-bottom: 12px;
+}
+
+.mnz-drilldown-chart {
+    min-height: 120px;
+    margin-bottom: 12px;
+}
+
+.mnz-drilldown-chart .mnz-investigation-bars {
+    height: 110px;
+}
+
+.mnz-drilldown-bar-value {
+    font-size: 11px;
+    font-weight: 600;
+    color: #333;
+    margin-bottom: 2px;
+    line-height: 1;
+}
+
+.mnz-drilldown-bar-item {
+    justify-content: flex-end;
+}
+
+.mnz-bar-clickable {
+    cursor: pointer;
+}
+
+.mnz-pattern-collapsible {
+    padding-top: 20px;
+}
+
+.mnz-pattern-collapsible-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+}
+
+.mnz-pattern-collapsible-header .mnz-incident-chart-title {
+    margin: 0;
+}
+
+.mnz-pattern-collapsible-body {
+    margin-top: 10px;
+}
+
+

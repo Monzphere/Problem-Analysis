@@ -96,3 +96,37 @@
     background: #2b2b2b !important;
     color: #cccccc !important;
 }
+
+[theme='dark-theme'] .mnz-incident-chart-container {
+    background: rgba(255, 255, 255, 0.05);
+}
+
+[theme='dark-theme'] .mnz-investigation-filter-bar.mnz-filter-active {
+    background: rgba(2, 117, 184, 0.2);
+}
+
+[theme='dark-theme'] .mnz-filter-label {
+    color: #5dade2;
+}
+
+[theme='dark-theme'] .mnz-filter-comparison,
+[theme='dark-theme'] .mnz-drilldown-hint,
+[theme='dark-theme'] .mnz-drilldown-subhint,
+[theme='dark-theme'] .mnz-heatmap-row-label,
+[theme='dark-theme'] .mnz-heatmap-hour-label,
+[theme='dark-theme'] .mnz-investigation-bar-label,
+[theme='dark-theme'] .mnz-investigation-monthly-label {
+    color: #9ca3af;
+}
+
+[theme='dark-theme'] .mnz-investigation-drilldown {
+    background: rgba(255, 255, 255, 0.05);
+}
+
+[theme='dark-theme'] .mnz-drilldown-title {
+    color: #e0e0e0;
+}
+
+[theme='dark-theme'] .mnz-drilldown-bar-value {
+    color: #e0e0e0;
+}
