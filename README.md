@@ -6,7 +6,16 @@
 
 This module provides a historical analysis of specific problems in Zabbix, offering a comparative report between the current and previous months. It helps users monitor issue trends and resolution efficiency.
 
-<img width="1377" height="574" alt="image" src="https://github.com/user-attachments/assets/253ba616-05b3-4e9e-b693-ea513cae8a4c" />
+<img width="1126" height="677" alt="image" src="https://github.com/user-attachments/assets/cbfee88c-208d-4687-9746-7114af6184e8" />
+<img width="1064" height="691" alt="image" src="https://github.com/user-attachments/assets/5032246c-4dbd-4ae4-8123-ee10ccc693ea" />
+<img width="944" height="592" alt="image" src="https://github.com/user-attachments/assets/24f293d6-a0a3-486f-8b91-2cbebe3ebf89" />
+<img width="949" height="651" alt="image" src="https://github.com/user-attachments/assets/7668ce1f-690f-4753-9ea7-540437d134af" />
+<img width="963" height="578" alt="image" src="https://github.com/user-attachments/assets/4b7892ef-4a24-43c9-904c-c5ff658e46e9" />
+<img width="935" height="662" alt="image" src="https://github.com/user-attachments/assets/1548870e-56b3-455d-8b50-ccecc7726724" />
+
+
+
+
 
 
 ## **Features**
