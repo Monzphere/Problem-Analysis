@@ -8,29 +8,17 @@ use Exception;
 
 class CControllerAnalistServicePopup extends CController {
 
-	/**
-	 * Cache for SLI data to avoid repeated API calls
-	 */
 	private static $sliCache = [];
-	private static $cacheExpiry = 300; // Increased cache time to 5 minutes
+	private static $cacheExpiry = 300;
 
-	/**
-	 * Initialize controller
-	 */
 	protected function init(): void {
 		$this->disableCsrfValidation();
 	}
 
-	/**
-	 * Check user permissions
-	 */
 	protected function checkPermissions(): bool {
 		return $this->getUserType() >= USER_TYPE_ZABBIX_USER;
 	}
 
-	/**
-	 * Check input parameters
-	 */
 	protected function checkInput(): bool {
 		$fields = [
 			'hostname' => 'string',
@@ -50,17 +38,14 @@ class CControllerAnalistServicePopup extends CController {
 		return $ret;
 	}
 
-	/**
-	 * Main action handler
-	 */
 	protected function doAction(): void {
-		// Set JSON header
+		
 		header('Content-Type: application/json');
 		
 		$response = ['success' => false];
 
 		try {
-			// Get input parameters
+			
 			$params = [
 				'hostname' => $this->getInput('hostname', ''),
 				'hostid' => $this->getInput('hostid', ''),
@@ -68,18 +53,17 @@ class CControllerAnalistServicePopup extends CController {
 				'triggerid' => $this->getInput('triggerid', ''),
 				'serviceid' => $this->getInput('serviceid', '')
 			];
-			
-			// Get event tags if eventid is provided
+
 			$event_tags = [];
 			if (!empty($params['eventid'])) {
 				$event_tags = $this->getEventTags($params['eventid']);
 			}
 
 			if ($params['serviceid']) {
-				// Get specific service details
+				
 				$response = $this->getServiceDetails($params['serviceid']);
 			} else {
-				// Get services list
+				
 				$response = $this->getServices($params, $event_tags);
 			}
 
@@ -93,17 +77,13 @@ class CControllerAnalistServicePopup extends CController {
 			];
 		}
 
-		// Direct JSON output
 		echo json_encode($response);
 		exit;
 	}
 
-	/**
-	 * Get services list filtered by parameters and event tags
-	 */
 	private function getServices(array $params, array $event_tags = []): array {
 		try {
-			// Preparar parâmetros da API Service.get
+			
 			$service_params = [
 				'output' => 'extend',
 				'evaltype' => 2,
@@ -114,14 +94,13 @@ class CControllerAnalistServicePopup extends CController {
 				'sortfield' => 'name',
 				'sortorder' => 'ASC'
 			];
-			
-			// Se há tags do evento, usar como problem_tags
+
 			if (!empty($event_tags)) {
 				$problem_tags = [];
 				foreach ($event_tags as $tag) {
 					if (isset($tag['tag'])) {
 						$problem_tag = ['tag' => $tag['tag']];
-						// Incluir value mesmo se vazio (como no exemplo)
+						
 						$problem_tag['value'] = $tag['value'] ?? '';
 						$problem_tags[] = $problem_tag;
 					}
@@ -131,18 +110,17 @@ class CControllerAnalistServicePopup extends CController {
 					$service_params['problem_tags'] = $problem_tags;
 				}
 			}
-			
-			// Buscar serviços com filtros aplicados
+
 			$services = API::Service()->get($service_params);
-			
-			// Enriquecer dados dos serviços com informações SLA e caminho completo
+
 			$enriched_services = [];
 			foreach ($services as $service) {
-				// Buscar dados SLI para cada serviço (com cache)
+				
 				$sli_data = $this->getSLIDataOptimized($service['serviceid']);
 				
 				if ($sli_data) {
 					$service['sli'] = $sli_data['sli'];
+					$service['slo'] = $sli_data['slo'] ?? null;
 					$service['uptime'] = $sli_data['uptime'];
 					$service['downtime'] = $sli_data['downtime'];
 					$service['error_budget'] = $sli_data['error_budget'];
@@ -151,6 +129,7 @@ class CControllerAnalistServicePopup extends CController {
 					$service['sla_name'] = $sli_data['sla_name'] ?? null;
 				} else {
 					$service['sli'] = null;
+					$service['slo'] = null;
 					$service['uptime'] = null;
 					$service['downtime'] = null;
 					$service['error_budget'] = null;
@@ -158,8 +137,7 @@ class CControllerAnalistServicePopup extends CController {
 					$service['sla_id'] = null;
 					$service['sla_name'] = null;
 				}
-				
-				// Buscar caminho completo da hierarquia
+
 				$service['hierarchy_path'] = $this->getServiceHierarchyPath($service['serviceid']);
 				
 				$enriched_services[] = $service;
@@ -188,12 +166,9 @@ class CControllerAnalistServicePopup extends CController {
 		}
 	}
 
-	/**
-	 * Get detailed service information - OPTIMIZED
-	 */
 	private function getServiceDetails(string $serviceid): array {
 		try {
-			// Get service details
+			
 			$services = API::Service()->get([
 				'output' => 'extend',
 				'serviceids' => [$serviceid],
@@ -210,12 +185,12 @@ class CControllerAnalistServicePopup extends CController {
 
 			$service = $services[0];
 
-			// Get SLI data using optimized method
 			$sli_data = $this->getSLIDataOptimized($serviceid);
 			
 			if ($sli_data) {
-				// Use the actual data from SLA API
+				
 				$service['sli'] = $sli_data['sli'];
+				$service['slo'] = $sli_data['slo'] ?? null;
 				$service['uptime'] = $sli_data['uptime'];
 				$service['downtime'] = $sli_data['downtime'];
 				$service['error_budget'] = $sli_data['error_budget'];
@@ -223,8 +198,9 @@ class CControllerAnalistServicePopup extends CController {
 				$service['sla_id'] = $sli_data['sla_id'] ?? null;
 				$service['sla_name'] = $sli_data['sla_name'] ?? null;
 			} else {
-				// No SLA data available
+				
 				$service['sli'] = null;
+				$service['slo'] = null;
 				$service['uptime'] = null;
 				$service['downtime'] = null;
 				$service['error_budget'] = null;
@@ -233,7 +209,6 @@ class CControllerAnalistServicePopup extends CController {
 				$service['sla_name'] = null;
 			}
 
-			// Get SLA information if available  
 			$service['sla_info'] = $this->getSLAInfo($serviceid);
 
 			return [
@@ -252,11 +227,8 @@ class CControllerAnalistServicePopup extends CController {
 		}
 	}
 
-	/**
-	 * Get SLI data with optimized caching and fast failure
-	 */
 	private function getSLIDataOptimized(string $serviceid): ?array {
-		// Check cache first
+		
 		$cacheKey = 'sli_' . $serviceid;
 		if (isset(self::$sliCache[$cacheKey])) {
 			$cached = self::$sliCache[$cacheKey];
@@ -267,19 +239,18 @@ class CControllerAnalistServicePopup extends CController {
 		}
 
 		try {
-			// Fast SLA lookup
+			
 			$sli_data = $this->fastSlaLookup($serviceid);
 			
 			if ($sli_data) {
-				// Cache successful result
+				
 				self::$sliCache[$cacheKey] = [
 					'data' => $sli_data,
 					'expiry' => time() + self::$cacheExpiry
 				];
 				return $sli_data;
 			}
-			
-			// Cache null result (shorter time)
+
 			self::$sliCache[$cacheKey] = [
 				'data' => null,
 				'expiry' => time() + 30
@@ -287,7 +258,7 @@ class CControllerAnalistServicePopup extends CController {
 			return null;
 			
 		} catch (Exception $e) {
-			// Cache error result
+			
 			self::$sliCache[$cacheKey] = [
 				'data' => null,
 				'expiry' => time() + 15
@@ -296,17 +267,14 @@ class CControllerAnalistServicePopup extends CController {
 		}
 	}
 
-	/**
-	 * Fast SLA lookup with minimal API calls
-	 */
 	private function fastSlaLookup(string $serviceid): ?array {
-		// Check if SLA API is available
+		
 		if (!class_exists('API') || !method_exists('API', 'SLA')) {
 			return null;
 		}
 
 		try {
-			// Get SLA for this service (optimized request)
+			
 			$slas = API::SLA()->get([
 				'output' => ['slaid', 'name', 'slo'],
 				'serviceids' => [$serviceid],
@@ -318,8 +286,7 @@ class CControllerAnalistServicePopup extends CController {
 			}
 
 			$sla = $slas[0];
-			
-			// Get SLI data
+
 			$sli_response = API::SLA()->getSli([
 				'slaid' => $sla['slaid'],
 				'serviceids' => [(int)$serviceid],
@@ -342,11 +309,11 @@ class CControllerAnalistServicePopup extends CController {
 				return null;
 			}
 
-			// Get most recent period data
 			$period_data = end($sli_data_array[$service_index]);
 			
 			return [
 				'sli' => $period_data['sli'] ?? null,
+				'slo' => isset($sla['slo']) ? (float) $sla['slo'] : null,
 				'uptime' => $this->formatDuration($period_data['uptime'] ?? 0),
 				'downtime' => $this->formatDuration($period_data['downtime'] ?? 0),
 				'error_budget' => $this->formatDuration($period_data['error_budget'] ?? 0),
@@ -362,11 +329,8 @@ class CControllerAnalistServicePopup extends CController {
 		}
 	}
 
-	/**
-	 * Format duration in seconds to human readable format
-	 */
 	private function formatDuration(int $seconds): string {
-		// Handle negative values for error budget
+		
 		$is_negative = $seconds < 0;
 		$abs_seconds = abs($seconds);
 		
@@ -385,14 +349,11 @@ class CControllerAnalistServicePopup extends CController {
 		if ($minutes > 0) $parts[] = $minutes . 'm';
 		if ($secs > 0 && empty($parts)) $parts[] = $secs . 's';
 
-		$formatted = implode(' ', array_slice($parts, 0, 2)); // Show max 2 parts
+		$formatted = implode(' ', array_slice($parts, 0, 2)); 
 		
 		return $is_negative ? '-' . $formatted : $formatted;
 	}
 
-	/**
-	 * Get SLA information for a service
-	 */
 	private function getSLAInfo(string $serviceid): array {
 		try {
 			return [
@@ -404,9 +365,6 @@ class CControllerAnalistServicePopup extends CController {
 		}
 	}
 
-	/**
-	 * Get event tags for the specified event ID
-	 */
 	private function getEventTags(string $eventid): array {
 		try {
 			$events = API::Event()->get([
@@ -427,20 +385,15 @@ class CControllerAnalistServicePopup extends CController {
 		}
 	}
 
-	/**
-	 * Get complete hierarchy path for a service (from root to service)
-	 */
 	private function getServiceHierarchyPath(string $serviceid): array {
 		try {
 			$path = [];
 			$current_serviceid = $serviceid;
-			$visited = []; // Evitar loops infinitos
-			
-			// Buscar recursivamente até o topo da hierarquia
+			$visited = [];
+
 			while ($current_serviceid && !in_array($current_serviceid, $visited)) {
 				$visited[] = $current_serviceid;
-				
-				// Buscar serviço atual com seus parents
+
 				$services = API::Service()->get([
 					'output' => 'extend',
 					'serviceids' => [$current_serviceid],
@@ -454,8 +407,7 @@ class CControllerAnalistServicePopup extends CController {
 				}
 				
 				$service = $services[0];
-				
-				// Adicionar serviço atual ao início do caminho (para ficar: root -> ... -> service)
+
 				array_unshift($path, [
 					'serviceid' => $service['serviceid'],
 					'name' => $service['name'],
@@ -464,13 +416,12 @@ class CControllerAnalistServicePopup extends CController {
 					'tags' => $service['tags'],
 					'problem_tags' => $service['problem_tags']
 				]);
-				
-				// Próximo: parent (se existir)
+
 				if (!empty($service['parents'])) {
-					// Pegar o primeiro parent (assumindo que há apenas um caminho principal)
+					
 					$current_serviceid = $service['parents'][0]['serviceid'];
 				} else {
-					// Chegou ao topo da hierarquia
+					
 					break;
 				}
 			}
