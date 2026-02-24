@@ -1,8 +1,8 @@
 # **Zabbix Problem Analysis Module**
-![views](https://komarev.com/ghpvc/?username=matheusandrade&repo=https://github.com/Monzphere/IncidentInvestigation) 
-![Stars](https://img.shields.io/github/stars/Monzphere/IncidentInvestigation?style=social)
-![Forks](https://img.shields.io/github/forks/Monzphere/IncidentInvestigation?style=social)
-![Issues](https://img.shields.io/github/issues/Monzphere/IncidentInvestigation)
+![views](https://komarev.com/ghpvc/?username=matheusandrade&repo=https://github.com/Monzphere/Problem-Analysis) 
+![Stars](https://img.shields.io/github/stars/Monzphere/Problem-Analysis?style=social)
+![Forks](https://img.shields.io/github/forks/Monzphere/Problem-Analysis?style=social)
+![Issues](https://img.shields.io/github/issues/Monzphere/Problem-Analysis)
 
 
 ## This module was developed from version 7.0x.
