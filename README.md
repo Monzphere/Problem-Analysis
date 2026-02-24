@@ -1,4 +1,9 @@
 # **Zabbix Problem Analysis Module**
+![views](https://komarev.com/ghpvc/?username=matheusandrade&repo=https://github.com/Monzphere/IncidentInvestigation) 
+![Stars](https://img.shields.io/github/stars/Monzphere/IncidentInvestigation?style=social)
+![Forks](https://img.shields.io/github/forks/Monzphere/IncidentInvestigation?style=social)
+![Issues](https://img.shields.io/github/issues/Monzphere/IncidentInvestigation)
+
 
 ## This module was developed from version 7.0x.
 ## However, with some adjustments, it may be functional in other versions that support module deployment.
